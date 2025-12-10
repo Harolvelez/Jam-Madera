@@ -12,32 +12,33 @@ class AuthController extends Controller
     // LOGIN AVANZADO
     public function login(Request $request)
     {
-        // Validación robusta
+        \Log::info('LOGIN: entrando al método', ['data' => $request->all()]);
+
+        \Log::info('LOGIN: antes de validar');
+
         $credentials = $request->validate([
             'email' => ['required', 'email', 'exists:users,email'],
             'password' => ['required', 'string', 'min:4'],
-        ], [
-            'email.exists' => 'El correo no está registrado.',
         ]);
 
-        // Buscar usuario
+        \Log::info('LOGIN: después de validar, antes de buscar usuario');
+
         $user = User::where('email', $credentials['email'])->first();
 
+        \Log::info('LOGIN: después de buscar usuario', ['user_id' => $user?->id]);
+
         if (!$user || !Hash::check($credentials['password'], $user->password)) {
+            \Log::info('LOGIN: credenciales incorrectas');
             throw ValidationException::withMessages([
-                'password' => ['La contraseña es incorrecta.'],
+                'email' => ['Credenciales incorrectas.'],
             ]);
         }
 
-        // Eliminar tokens previos (solo si quieres evitar múltiples sesiones)
-        $user->tokens()->delete();
+        \Log::info('LOGIN: credenciales correctas, creando token');
 
-        // Crear token Sanctum
-        $token = $user->createToken('jam_token')->plainTextToken;
+        $token = $user->createToken('api-token')->plainTextToken;
 
-        // Actualizar última sesión
-        $user->last_login_at = now();
-        $user->save();
+        \Log::info('LOGIN: token creado OK');
 
         return response()->json([
             'message' => 'Login exitoso',
@@ -51,6 +52,7 @@ class AuthController extends Controller
             'token' => $token
         ]);
     }
+
 
     // LOGOUT
     public function logout(Request $request)

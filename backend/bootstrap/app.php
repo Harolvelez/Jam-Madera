@@ -13,8 +13,9 @@ return Application::configure(basePath: dirname(__DIR__))
         apiPrefix: 'api',                       // 👈 Prefijo /api para routes/api.php
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        //
+        $middleware->append(\Illuminate\Http\Middleware\HandleCors::Class);
     })
+
     ->withExceptions(function (Exceptions $exceptions): void {
         //
     })

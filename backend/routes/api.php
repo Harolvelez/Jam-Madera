@@ -24,6 +24,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Clientes
     Route::get('/clients', [ClientController::class, 'index']);
+    Route::post('/clients', [ClientController::class, 'store']);
 
     // Estados
     Route::get('/statuses', [StatusController::class, 'index']);
