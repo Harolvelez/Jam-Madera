@@ -3,35 +3,44 @@ import { useDroppable } from "@dnd-kit/core";
 import OrderCard from "./OrderCard";
 
 export default function BoardColumn({ status }: any) {
-  const { setNodeRef } = useDroppable({
+  const { setNodeRef, isOver } = useDroppable({
     id: status.id,
   });
 
   return (
-    <Paper
+    <Box
       ref={setNodeRef}
-      radius="md"
-      p="sm"
-      w={280}
-      bg="gray.2"
-      shadow="xs"
+      style={{ minHeight: "70vh" }}
     >
-      {/* Header */}
-      <Group justify="space-between" mb="sm">
-        <Text fw={600} size="sm" tt="uppercase">
-          {status.name}
-        </Text>
-        <Badge size="sm" variant="light">
-          {status.orders.length}
-        </Badge>
-      </Group>
+      <Paper
+        radius="lg"
+        p="sm"
+        w={300}
+        bg={isOver ? "blue.0" : "gray.1"}
+        shadow="sm"
+        withBorder
+      >
+        {/* Header */}
+        <Group justify="space-between" mb="sm">
+          <Text fw={600} size="sm" tt="uppercase">
+            {status.name}
+          </Text>
+          <Badge size="sm" variant="light">
+            {status.orders.length}
+          </Badge>
+        </Group>
 
-      {/* Cards */}
-      <Stack gap="sm">
-        {status.orders.map((order: any) => (
-          <OrderCard key={order.id} order={order} />
-        ))}
-      </Stack>
-    </Paper>
+        {/* Cards */}
+        <Stack gap="sm" style={{ maxHeight: "70vh", overflowY: "auto" }}>
+          {status.orders.map((order: any) => (
+            <OrderCard
+              key={order.id}
+              order={order}
+              statusId={status.id}
+            />
+          ))}
+        </Stack>
+      </Paper>
+    </Box>
   );
 }

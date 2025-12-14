@@ -6,6 +6,8 @@ use App\Http\Controllers\OrderController;
 use App\Http\Controllers\ClientController;
 use App\Http\Controllers\StatusController;
 use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\api\OrderBoardController;
+
 
 Route::post('/login', [AuthController::class, 'login'])
     ->middleware('throttle:5,1');
@@ -21,6 +23,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('/orders/{id}', [OrderController::class, 'update']);
     Route::delete('/orders/{id}', [OrderController::class, 'destroy']);
     Route::post('/orders/{id}/status', [OrderController::class, 'updateStatus']);
+
 
     // Mover orden entre columnas
     Route::patch('/orders/{order}/move', [OrderBoardController::class, 'move']);
