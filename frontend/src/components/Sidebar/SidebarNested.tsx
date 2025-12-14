@@ -37,31 +37,10 @@ const menu = [
     ],
   },
 
-
-
   {
     label: "Estados de órdenes",
     icon: IconFlag,
-    link: "/dashboard/estados" ,
-  },
-
-
-  {
-    label: "Agenda y alertas",
-    icon: IconAlertCircle, // podríamos cambiar a otro icono si quieres
-    links: [
-      { label: "Agenda", link: "/dashboard/agenda" },
-      { label: "Alertas", link: "/dashboard/alertas" },
-    ],
-  },
-
-  {
-    label: "Configuraciones",
-    icon: IconSettings,
-    links: [
-      { label: "Preferencias", link: "/dashboard/config" },
-      { label: "Seguridad", link: "/dashboard/config/seguridad" },
-    ],
+    link: "/dashboard/ordenes/estados" ,
   },
 ];
 

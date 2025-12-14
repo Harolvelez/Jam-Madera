@@ -7,13 +7,13 @@ use App\Http\Controllers\ClientController;
 use App\Http\Controllers\StatusController;
 use App\Http\Controllers\NotificationController;
 
-// LOGIN
 Route::post('/login', [AuthController::class, 'login'])
     ->middleware('throttle:5,1');
 
-// RUTAS PROTEGIDAS POR TOKEN SANCTUM
 Route::middleware('auth:sanctum')->group(function () {
-
+    // Tablero tipo Trello
+    Route::get('/orders/board', [OrderController::class, 'board']);
+    
     // Órdenes
     Route::get('/orders', [OrderController::class, 'index']);
     Route::get('/orders/{id}', [OrderController::class, 'show']);
@@ -21,6 +21,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('/orders/{id}', [OrderController::class, 'update']);
     Route::delete('/orders/{id}', [OrderController::class, 'destroy']);
     Route::post('/orders/{id}/status', [OrderController::class, 'updateStatus']);
+
+    // Mover orden entre columnas
+    Route::patch('/orders/{order}/move', [OrderBoardController::class, 'move']);
 
     // Clientes
     Route::get('/clients', [ClientController::class, 'index']);
@@ -34,5 +37,4 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Logout
     Route::post('/logout', [AuthController::class, 'logout']);
-
 });

@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Login from "./pages/login";
 import Dashboard from "./pages/Dashboard";
 import CreateOrderPage from "./pages/CreateOrderPage";
+import EstadosOrdenes from "./pages/EstadosOrdenes";
 
 
 function App() {
@@ -17,7 +18,8 @@ function App() {
         {/* Crear Orden */}
         <Route path="/dashboard/ordenes/crear" element={<CreateOrderPage />} />
         
-      </Routes>
+        {/* Estado de ordenes */}
+        <Route path="/dashboard/ordenes/estados" element={<EstadosOrdenes />} />      </Routes>
     </BrowserRouter>
   );
 }

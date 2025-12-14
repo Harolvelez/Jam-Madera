@@ -8,9 +8,9 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class OrderStatusHistory extends Model
 {
-    use HasFactory;
+    protected $table = 'order_status_history'; // 👈 CLAVE
 
-    protected $table = 'order_status_history';
+    public $timestamps = false;
 
     protected $fillable = [
         'order_id',
@@ -19,25 +19,8 @@ class OrderStatusHistory extends Model
         'changed_at'
     ];
 
-    // la tabla usa changed_at en vez de created_at -> desactivamos timestamps y manejamos changed_at manualmente
-    public $timestamps = false;
-
-    protected $dates = [
-        'changed_at'
+    protected $casts = [
+        'changed_at' => 'datetime',
     ];
-
-    public function order(): BelongsTo
-    {
-        return $this->belongsTo(Order::class, 'order_id');
-    }
-
-    public function status(): BelongsTo
-    {
-        return $this->belongsTo(OrderStatus::class, 'status_id');
-    }
-
-    public function changer(): BelongsTo
-    {
-        return $this->belongsTo(User::class, 'changed_by');
-    }
 }
+

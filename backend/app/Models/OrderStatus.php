@@ -8,24 +8,15 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class OrderStatus extends Model
 {
-    use HasFactory;
-
     protected $table = 'order_status';
-
-    protected $fillable = [
-        'name'
-    ];
-
-    // sin timestamps
+    
     public $timestamps = false;
 
-    public function orders(): HasMany
+    protected $fillable = ['name'];
+
+    public function orders()
     {
         return $this->hasMany(Order::class, 'status_id');
     }
-
-    public function history(): HasMany
-    {
-        return $this->hasMany(OrderStatusHistory::class, 'status_id');
-    }
 }
+

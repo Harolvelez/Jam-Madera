@@ -10,18 +10,12 @@ class Kernel extends HttpKernel
      * Middleware globales — se ejecutan en TODAS las rutas web y API.
      */
     protected $middleware = [
-        // Manejo del mantenimiento
-        \Illuminate\Foundation\Http\Middleware\PreventRequestsDuringMaintenance::class,
-
-        // Validar tamaño máximo de petición
-        \Illuminate\Foundation\Http\Middleware\ValidatePostSize::class,
-
-        // Convertir strings vacíos en null
-        \Illuminate\Foundation\Http\Middleware\ConvertEmptyStringsToNull::class,
-
-        // CORS (si usas Laravel CORS integrado)
         \Illuminate\Http\Middleware\HandleCors::class,
+        \Illuminate\Foundation\Http\Middleware\PreventRequestsDuringMaintenance::class,
+        \Illuminate\Foundation\Http\Middleware\ValidatePostSize::class,
+        \Illuminate\Foundation\Http\Middleware\ConvertEmptyStringsToNull::class,
     ];
+
 
     /**
      * Grupos de middleware.
