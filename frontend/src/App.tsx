@@ -3,7 +3,7 @@ import Login from "./pages/login";
 import Dashboard from "./pages/Dashboard";
 import CreateOrderPage from "./pages/CreateOrderPage";
 import EstadosOrdenes from "./pages/EstadosOrdenes";
-
+import AuditDashboard from "./pages/AuditDashboard";
 
 function App() {
   return (
@@ -19,7 +19,11 @@ function App() {
         <Route path="/dashboard/ordenes/crear" element={<CreateOrderPage />} />
         
         {/* Estado de ordenes */}
-        <Route path="/dashboard/ordenes/estados" element={<EstadosOrdenes />} />      </Routes>
+        <Route path="/dashboard/ordenes/estados" element={<EstadosOrdenes />} />
+
+        {/* Auditoria */}
+        <Route path="/dashboard/auditoria" element={<AuditDashboard />} />     
+      </Routes>
     </BrowserRouter>
   );
 }

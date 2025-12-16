@@ -3,12 +3,10 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class OrderStatusHistory extends Model
 {
-    protected $table = 'order_status_history'; // 👈 CLAVE
+    protected $table = 'order_status_history';
 
     public $timestamps = false;
 
@@ -16,11 +14,26 @@ class OrderStatusHistory extends Model
         'order_id',
         'status_id',
         'changed_by',
-        'changed_at'
+        'changed_at',
     ];
 
     protected $casts = [
         'changed_at' => 'datetime',
     ];
-}
 
+    // Relaciones
+    public function order()
+    {
+        return $this->belongsTo(Order::class);
+    }
+
+    public function status()
+    {
+        return $this->belongsTo(OrderStatus::class, 'status_id');
+    }
+
+    public function user()
+    {
+        return $this->belongsTo(User::class, 'changed_by');
+    }
+}

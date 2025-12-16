@@ -7,15 +7,34 @@ use App\Http\Controllers\ClientController;
 use App\Http\Controllers\StatusController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\api\OrderBoardController;
+use App\Http\Controllers\AuditController;
+
 
 
 Route::post('/login', [AuthController::class, 'login'])
     ->middleware('throttle:5,1');
 
+Route::get('/users/simple', function () {
+    return \App\Models\User::select('id', 'name')
+        ->orderBy('name')
+        ->get();
+    })->middleware('auth:sanctum');
+
+Route::get('/orders/search', function (\Illuminate\Http\Request $request) {
+    return \App\Models\Order::query()
+        ->when($request->q, fn ($q) =>
+            $q->where('code', 'like', "%{$request->q}%")
+        )
+        ->limit(10)
+        ->get(['id', 'order_number']);
+    })->middleware('auth:sanctum');
+
+
 Route::middleware('auth:sanctum')->group(function () {
     // Tablero tipo Trello
     Route::get('/orders/board', [OrderController::class, 'board']);
-    
+    Route::get('/audit/order-status', [AuditController::class, 'index']);
+
     // Órdenes
     Route::get('/orders', [OrderController::class, 'index']);
     Route::get('/orders/{id}', [OrderController::class, 'show']);
