@@ -2,9 +2,8 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 
 class OrderItem extends Model
 {
@@ -12,27 +11,15 @@ class OrderItem extends Model
 
     protected $table = 'order_items';
 
+    // ✅ CLAVE: tu tabla order_items no tiene timestamps
+    public $timestamps = false;
+
     protected $fillable = [
         'order_id',
         'description',
         'quantity',
         'width',
         'height',
-        'length'
+        'length',
     ];
-
-    // la tabla no tiene created_at/updated_at
-    public $timestamps = false;
-
-    protected $casts = [
-        'width' => 'decimal:2',
-        'height' => 'decimal:2',
-        'length' => 'decimal:2',
-        'quantity' => 'integer',
-    ];
-
-    public function order(): BelongsTo
-    {
-        return $this->belongsTo(Order::class, 'order_id');
-    }
 }

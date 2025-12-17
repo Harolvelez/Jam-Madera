@@ -2,10 +2,8 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 
 class Order extends Model
 {
@@ -13,43 +11,28 @@ class Order extends Model
 
     protected $table = 'orders';
 
+    // ✅ IMPORTANTE: tu tabla sí tiene created_at/updated_at
+    public $timestamps = true;
+
     protected $fillable = [
         'order_number',
+        'nit',
+        'client_name',
+        'phone',
+        'email',
+        'ingreso_type',
+        'creation_date',
+        'estimated_delivery_date',
+        'simple_status',
+        'status_id',
+        'created_by',
         'client_id',
         'delivery_date',
-        'status_id',
-        'created_by'
+        'description',
     ];
 
-    // tu tabla orders tiene created_at pero no updated_at -> evitar que Eloquent intente actualizar updated_at
-    public $timestamps = false;
-
-    protected $casts = [
-        'delivery_date' => 'date',
-    ];
-
-    public function client(): BelongsTo
-    {
-        return $this->belongsTo(Client::class);
-    }
-
-    public function items(): HasMany
+    public function items()
     {
         return $this->hasMany(OrderItem::class, 'order_id');
-    }
-
-    public function status(): BelongsTo
-    {
-        return $this->belongsTo(OrderStatus::class, 'status_id');
-    }
-
-    public function history(): HasMany
-    {
-        return $this->hasMany(OrderStatusHistory::class, 'order_id');
-    }
-
-    public function creator(): BelongsTo
-    {
-        return $this->belongsTo(User::class, 'created_by');
     }
 }

@@ -1,15 +1,27 @@
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Outlet } from "react-router-dom";
 import Login from "./pages/login";
+import Dashboard from "./pages/Dashboard";
+import DashboardHome from "./pages/DashboardHome";
+import CreateOrderPage from "./pages/orders/CreateOrderPage";
+import OrdersListPage from "./pages/orders/OrdersListPage";
+import OrderDetailPage from "./pages/orders/OrderDetailPage";
 
-function App() {
+export default function App() {
   return (
-    <Router>
+    <BrowserRouter>
       <Routes>
-        {/* Página de Login */}
         <Route path="/" element={<Login />} />
+
+        <Route path="/dashboard" element={<Dashboard />}>
+          <Route index element={<DashboardHome />} />
+
+          <Route path="orders" element={<Outlet />}>
+            <Route path="OrderList" element={<OrdersListPage />} />
+            <Route path="CreateOrder" element={<CreateOrderPage />} />
+            <Route path="Detail/:id" element={<OrderDetailPage />} />
+          </Route>
+        </Route>
       </Routes>
-    </Router>
+    </BrowserRouter>
   );
 }
-
-export default App;
