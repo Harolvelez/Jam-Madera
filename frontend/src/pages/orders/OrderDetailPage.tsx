@@ -5,12 +5,14 @@ import {
   Card,
   Table,
   Loader,
-  Badge,
   Divider,
   Center,
   SimpleGrid,
+  Button,
+  Group,
+  Modal,
 } from "@mantine/core";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { notifications } from "@mantine/notifications";
 
 /* =========================
@@ -38,10 +40,14 @@ type Order = {
    COMPONENTE
 ========================= */
 export default function OrderDetailPage() {
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const { id } = useParams<{ id: string }>();
+  // 🔴 modal eliminar
+  const [opened, setOpened] = useState(false);
 
   if (!id || isNaN(Number(id))) {
     return <Text>Orden no válida</Text>;
@@ -53,9 +59,7 @@ export default function OrderDetailPage() {
 
     fetch(`/api/orders/${id}`)
       .then((res) => {
-        if (!res.ok) {
-          throw new Error("Error al cargar la orden");
-        }
+        if (!res.ok) throw new Error();
         return res.json();
       })
       .then((data) => {
@@ -72,6 +76,31 @@ export default function OrderDetailPage() {
         setLoading(false);
       });
   }, [id]);
+
+  /* ---------- Eliminar orden ---------- */
+  const handleDelete = async () => {
+    try {
+      const res = await fetch(`/api/orders/${id}`, {
+        method: "DELETE",
+      });
+
+      if (!res.ok) throw new Error();
+
+      notifications.show({
+        title: "Orden eliminada",
+        message: "La orden fue eliminada correctamente",
+        color: "green",
+      });
+
+      navigate("/dashboard/orders/OrderList");
+    } catch {
+      notifications.show({
+        title: "Error",
+        message: "No se pudo eliminar la orden",
+        color: "red",
+      });
+    }
+  };
 
   /* ---------- Loading ---------- */
   if (loading) {
@@ -91,21 +120,38 @@ export default function OrderDetailPage() {
   ========================= */
   return (
     <>
-      <Title order={3} mb="xs">
-        Orden {order.order_number}
-      </Title>
+      {/* TÍTULO + BOTONES */}
+      <Group justify="space-between" mb="md">
+        <Title order={3}>Orden {order.order_number}</Title>
 
+        <Group>
+          <Button
+            variant="light"
+            onClick={() =>
+              navigate(`/dashboard/orders/edit/${order.id}`)
+            }
+          >
+            Editar
+          </Button>
+
+          <Button
+            color="red"
+            variant="light"
+            onClick={() => setOpened(true)}
+          >
+            Eliminar
+          </Button>
+        </Group>
+      </Group>
 
       {/* DATOS PRINCIPALES */}
       <SimpleGrid cols={{ base: 1, sm: 2 }} mb="md">
         <Card withBorder>
           <Text>
-            <strong>Cliente:</strong>{" "}
-            {order.client_name || "-"}
+            <strong>Cliente:</strong> {order.client_name || "-"}
           </Text>
           <Text>
-            <strong>NIT:</strong>{" "}
-            {order.nit || "-"}
+            <strong>NIT:</strong> {order.nit || "-"}
           </Text>
         </Card>
 
@@ -120,12 +166,7 @@ export default function OrderDetailPage() {
       <Divider my="md" label="Items de la orden" />
 
       {/* TABLA DESKTOP */}
-      <Table
-        striped
-        highlightOnHover
-        withTableBorder
-        visibleFrom="sm"
-      >
+      <Table striped highlightOnHover withTableBorder visibleFrom="sm">
         <Table.Thead>
           <Table.Tr>
             <Table.Th>Descripción</Table.Th>
@@ -149,37 +190,50 @@ export default function OrderDetailPage() {
         </Table.Tbody>
       </Table>
 
-      {/* MOBILE STACK */}
-      <SimpleGrid
-        cols={1}
-        spacing="sm"
-        hiddenFrom="sm"
-      >
+      {/* MOBILE */}
+      <SimpleGrid cols={1} spacing="sm" hiddenFrom="sm">
         {order.items.map((item) => (
           <Card key={item.id} withBorder>
             <Text>
-              <strong>Descripción:</strong>{" "}
-              {item.description}
+              <strong>Descripción:</strong> {item.description}
             </Text>
             <Text>
-              <strong>Cantidad:</strong>{" "}
-              {item.quantity}
+              <strong>Cantidad:</strong> {item.quantity}
             </Text>
             <Text>
-              <strong>Ancho:</strong>{" "}
-              {item.width}
+              <strong>Ancho:</strong> {item.width}
             </Text>
             <Text>
-              <strong>Alto:</strong>{" "}
-              {item.height}
+              <strong>Alto:</strong> {item.height}
             </Text>
             <Text>
-              <strong>Largo:</strong>{" "}
-              {item.length}
+              <strong>Largo:</strong> {item.length}
             </Text>
           </Card>
         ))}
       </SimpleGrid>
+
+      {/* MODAL CONFIRMACIÓN */}
+      <Modal
+        opened={opened}
+        onClose={() => setOpened(false)}
+        title="¿Eliminar orden?"
+        centered
+      >
+        <Text mb="md">
+          ¿Estás seguro de eliminar la orden{" "}
+          <strong>{order.order_number}</strong>?
+        </Text>
+
+        <Group justify="flex-end">
+          <Button variant="default" onClick={() => setOpened(false)}>
+            No
+          </Button>
+          <Button color="red" onClick={handleDelete}>
+            Sí, eliminar
+          </Button>
+        </Group>
+      </Modal>
     </>
   );
 }

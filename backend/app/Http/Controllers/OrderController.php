@@ -96,4 +96,60 @@ class OrderController extends Controller
     });
 }
 
+public function destroy(Order $order)
+{
+    // Si tienes items relacionados
+    $order->items()->delete();
+
+    $order->delete();
+
+    return response()->json(null, 204);
+}
+
+public function update(Request $request, Order $order)
+{
+    $validated = $request->validate([
+        'order_number' => 'required|string',
+        'nit' => 'required|string',
+        'client_name' => 'required|string',
+        'phone' => 'required|string',
+        'email' => 'nullable|email',
+        'ingreso_type' => 'required|in:interno,externo',
+        'creation_date' => 'nullable|date',
+        'estimated_delivery_date' => 'nullable|date',
+
+        'items' => 'required|array|min:1',
+        'items.*.description' => 'required|string',
+        'items.*.quantity' => 'required|integer|min:1',
+        'items.*.width' => 'nullable|numeric',
+        'items.*.height' => 'nullable|numeric',
+        'items.*.length' => 'nullable|numeric',
+    ]);
+
+    // 🔹 SOLO campos de la orden (sin items)
+    $order->update([
+        'order_number' => $validated['order_number'],
+        'nit' => $validated['nit'],
+        'client_name' => $validated['client_name'],
+        'phone' => $validated['phone'],
+        'email' => $validated['email'],
+        'ingreso_type' => $validated['ingreso_type'],
+        'creation_date' => $validated['creation_date'],
+        'estimated_delivery_date' => $validated['estimated_delivery_date'],
+    ]);
+
+    // 🔥 ITEMS
+    $order->items()->delete();
+
+    foreach ($validated['items'] as $item) {
+        $order->items()->create($item);
+    }
+
+    return response()->json([
+        'message' => 'Orden actualizada correctamente'
+    ]);
+}
+
+
+
 }

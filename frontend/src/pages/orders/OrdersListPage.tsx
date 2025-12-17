@@ -1,5 +1,15 @@
 import { useEffect, useState } from "react";
-import { Card, Title, Text, SimpleGrid, Loader, Center } from "@mantine/core";
+import {
+  Card,
+  Title,
+  Text,
+  SimpleGrid,
+  Loader,
+  Center,
+  Button,
+  Group,
+  Modal,
+} from "@mantine/core";
 import { useNavigate, useLocation } from "react-router-dom";
 import { notifications } from "@mantine/notifications";
 
@@ -17,6 +27,10 @@ export default function OrdersListPage() {
 
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // 🔴 Estado para eliminar
+  const [opened, setOpened] = useState(false);
+  const [orderToDelete, setOrderToDelete] = useState<Order | null>(null);
 
   useEffect(() => {
     setLoading(true);
@@ -41,6 +55,45 @@ export default function OrdersListPage() {
       });
   }, [location.key]);
 
+  // 🗑️ Abrir modal
+  const handleDeleteClick = (order: Order) => {
+    setOrderToDelete(order);
+    setOpened(true);
+  };
+
+  // ✅ Confirmar eliminación (por ahora solo front)
+  const confirmDelete = async () => {
+  if (!orderToDelete) return;
+
+  try {
+    const res = await fetch(`/api/orders/${orderToDelete.id}`, {
+      method: "DELETE",
+    });
+
+    if (!res.ok) throw new Error();
+
+    setOrders((prev) =>
+      prev.filter((o) => o.id !== orderToDelete.id)
+    );
+
+    notifications.show({
+      title: "Orden eliminada",
+      message: "La orden fue eliminada correctamente",
+      color: "green",
+    });
+
+    setOpened(false);
+    setOrderToDelete(null);
+  } catch {
+    notifications.show({
+      title: "Error",
+      message: "No se pudo eliminar la orden",
+      color: "red",
+    });
+  }
+};
+
+
   if (loading) {
     return (
       <Center mt="xl">
@@ -63,8 +116,9 @@ export default function OrdersListPage() {
               withBorder
               shadow="sm"
               style={{ cursor: "pointer" }}
-              onClick={() => navigate(`/dashboard/orders/Detail/${order.id}`)
-}
+              onClick={() =>
+                navigate(`/dashboard/orders/Detail/${order.id}`)
+              }
             >
               <Title order={5}>{order.order_number}</Title>
 
@@ -77,12 +131,59 @@ export default function OrdersListPage() {
               </Text>
 
               <Text size="sm">
-                <strong>Entrega estimada:</strong> {order.estimated_delivery_date || "-"}
+                <strong>Entrega estimada:</strong>{" "}
+                {order.estimated_delivery_date || "-"}
               </Text>
+
+              {/* 🔘 BOTONES */}
+              <Group mt="md" grow>
+                <Button
+                  variant="light"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    navigate(`/dashboard/orders/edit/${order.id}`);
+                  }}
+                >
+                  Editar
+                </Button>
+
+                <Button
+                  color="red"
+                  variant="light"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleDeleteClick(order);
+                  }}
+                >
+                  Eliminar
+                </Button>
+              </Group>
             </Card>
           ))}
         </SimpleGrid>
       )}
+
+      {/* 🪟 MODAL CONFIRMACIÓN */}
+      <Modal
+        opened={opened}
+        onClose={() => setOpened(false)}
+        title="¿Eliminar orden?"
+        centered
+      >
+        <Text mb="md">
+          ¿Estás seguro de eliminar la orden{" "}
+          <strong>{orderToDelete?.order_number}</strong>?
+        </Text>
+
+        <Group justify="flex-end">
+          <Button variant="default" onClick={() => setOpened(false)}>
+            No
+          </Button>
+          <Button color="red" onClick={confirmDelete}>
+            Sí, eliminar
+          </Button>
+        </Group>
+      </Modal>
     </>
   );
 }

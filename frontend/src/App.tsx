@@ -5,6 +5,7 @@ import DashboardHome from "./pages/DashboardHome";
 import CreateOrderPage from "./pages/orders/CreateOrderPage";
 import OrdersListPage from "./pages/orders/OrdersListPage";
 import OrderDetailPage from "./pages/orders/OrderDetailPage";
+import OrderEditPage from "./pages/orders/OrderEditPage";
 
 export default function App() {
   return (
@@ -19,6 +20,7 @@ export default function App() {
             <Route path="OrderList" element={<OrdersListPage />} />
             <Route path="CreateOrder" element={<CreateOrderPage />} />
             <Route path="Detail/:id" element={<OrderDetailPage />} />
+            <Route path="edit/:id" element={<OrderEditPage />} />
           </Route>
         </Route>
       </Routes>
