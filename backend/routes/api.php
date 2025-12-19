@@ -8,6 +8,7 @@ use App\Http\Controllers\StatusController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\api\OrderBoardController;
 use App\Http\Controllers\AuditController;
+use App\Http\Controllers\OrderCalendarController;
 
 
 
@@ -37,15 +38,9 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Órdenes
     Route::get('/orders', [OrderController::class, 'index']);
-    Route::get('/orders/{id}', [OrderController::class, 'show']);
+
     Route::post('/orders', [OrderController::class, 'store']);
-    Route::put('/orders/{id}', [OrderController::class, 'update']);
-    Route::delete('/orders/{id}', [OrderController::class, 'destroy']);
-    Route::post('/orders/{id}/status', [OrderController::class, 'updateStatus']);
-
-
-    // Mover orden entre columnas
-    Route::patch('/orders/{order}/move', [OrderBoardController::class, 'move']);
+    Route::get('/orders/calendar', [OrderCalendarController::class, 'index']);
 
     // Clientes
     Route::get('/clients', [ClientController::class, 'index']);
@@ -59,4 +54,12 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Logout
     Route::post('/logout', [AuthController::class, 'logout']);
+    Route::get('/orders/{id}', [OrderController::class, 'show']);
+
+    // Mover orden entre columnas
+    Route::patch('/orders/{order}/move', [OrderBoardController::class, 'move']);
+    
+    Route::put('/orders/{id}', [OrderController::class, 'update']);
+    Route::delete('/orders/{id}', [OrderController::class, 'destroy']);
+    Route::post('/orders/{id}/status', [OrderController::class, 'updateStatus']);
 });

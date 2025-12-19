@@ -4,7 +4,8 @@ import type { DragEndEvent } from "@dnd-kit/core";
 import OrderCard from "../components/OrderCard.tsx";
 import { Box, Title, ScrollArea, Group } from "@mantine/core";
 import BoardColumn from "../components/BoardColumn";
-import { getOrderBoard, moveOrder } from "../services/api";
+import { getOrderBoard, moveOrder } from "../services/orders.service";
+
 
 export default function EstadosOrdenes() {
   const [board, setBoard] = useState<any[]>([]);
@@ -15,6 +16,7 @@ export default function EstadosOrdenes() {
   useEffect(() => {
     loadBoard();
   }, []);
+
 
   async function loadBoard() {
     const data = await getOrderBoard();

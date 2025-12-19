@@ -4,6 +4,10 @@ import Dashboard from "./pages/Dashboard";
 import CreateOrderPage from "./pages/CreateOrderPage";
 import EstadosOrdenes from "./pages/EstadosOrdenes";
 import AuditDashboard from "./pages/AuditDashboard";
+import OrdersCalendar from "./components/OrdersCalendar";
+import '@mantine/core/styles.css';
+import '@mantine/dates/styles.css';
+
 
 function App() {
   return (
@@ -22,7 +26,10 @@ function App() {
         <Route path="/dashboard/ordenes/estados" element={<EstadosOrdenes />} />
 
         {/* Auditoria */}
-        <Route path="/dashboard/auditoria" element={<AuditDashboard />} />     
+        <Route path="/dashboard/auditoria" element={<AuditDashboard />} />
+
+        {/* Calendario */}
+        <Route path="/dashboard/ordenes/calendario" element={<OrdersCalendar />} />  
       </Routes>
     </BrowserRouter>
   );

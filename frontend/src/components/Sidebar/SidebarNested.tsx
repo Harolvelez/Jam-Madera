@@ -16,7 +16,7 @@ const menu = [
   {
     label: "Dashboard",
     icon: IconGauge,
-    link: "/dashboard",
+    link: "/dashboard/auditoria",
   },
 
   {
@@ -38,9 +38,12 @@ const menu = [
   },
 
   {
-    label: "Estados de órdenes",
-    icon: IconFlag,
-    link: "/dashboard/ordenes/estados" ,
+    label: "Estados y calendario",
+    icon: IconBell,
+    links: [
+      { label: "Estados de órdenes", link: "/dashboard/ordenes/estados" },
+      { label: "Calendario", link: "/dashboard/ordenes/calendario" },
+    ],
   },
 ];
 

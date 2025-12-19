@@ -7,27 +7,57 @@ interface LinksGroupProps {
   icon: any;
   label: string;
   initiallyOpened?: boolean;
+  link?: string;
   links?: { label: string; link: string }[];
 }
 
-export function LinksGroup({ icon: Icon, label, initiallyOpened, links }: LinksGroupProps) {
+
+export function LinksGroup({
+  icon: Icon,
+  label,
+  initiallyOpened,
+  links,
+  link,
+}: LinksGroupProps) {
   const [opened, setOpened] = useState(initiallyOpened || false);
   const hasLinks = Array.isArray(links);
 
-  const items = (hasLinks ? links : []).map((link) => (
+  // 🔹 CASO 1: link directo (ej: Estados de órdenes)
+  if (!hasLinks && link) {
+    return (
+      <Text
+        component="a"
+        href={link}
+        className={classes.control}
+      >
+        <Group>
+          <ThemeIcon variant="light" size={30}>
+            <Icon size={18} />
+          </ThemeIcon>
+          <Text>{label}</Text>
+        </Group>
+      </Text>
+    );
+  }
+
+  // 🔹 CASO 2: menú con sub-links
+  const items = (links ?? []).map((item) => (
     <Text
       component="a"
-      href={link.link}
+      href={item.link}
       className={classes.link}
-      key={link.label}
+      key={item.label}
     >
-      {link.label}
+      {item.label}
     </Text>
   ));
 
   return (
     <>
-      <UnstyledButton onClick={() => setOpened((o) => !o)} className={classes.control}>
+      <UnstyledButton
+        onClick={() => setOpened((o) => !o)}
+        className={classes.control}
+      >
         <Group justify="space-between">
           <Group>
             <ThemeIcon variant="light" size={30}>
@@ -35,22 +65,18 @@ export function LinksGroup({ icon: Icon, label, initiallyOpened, links }: LinksG
             </ThemeIcon>
             <Text>{label}</Text>
           </Group>
-          {hasLinks && (
-            <IconChevronRight
-              className={classes.chevron}
-              size={16}
-              style={{
-                transform: opened ? "rotate(90deg)" : "none",
-                transition: "transform 0.2s",
-              }}
-            />
-          )}
+
+          <IconChevronRight
+            className={classes.chevron}
+            size={16}
+            style={{
+              transform: opened ? "rotate(90deg)" : "none",
+            }}
+          />
         </Group>
       </UnstyledButton>
 
-      {hasLinks && (
-        <Collapse in={opened}>{items}</Collapse>
-      )}
+      <Collapse in={opened}>{items}</Collapse>
     </>
   );
 }
