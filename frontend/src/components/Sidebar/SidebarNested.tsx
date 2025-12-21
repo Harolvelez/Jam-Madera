@@ -18,16 +18,22 @@ const menu = [
     icon: IconGauge,
     link: "/dashboard/auditoria",
   },
-
+  
+  {
+    label: "Clientes",
+    icon: IconUsers,
+    links: [
+      { label: "Crear o editar", link: "/dashboard/clientes" },
+    ],
+  },
   {
     label: "Usuarios",
     icon: IconUsers,
     links: [
-      { label: "Lista de usuarios", link: "/dashboard/usuarios" },
-      { label: "Crear usuario", link: "/dashboard/usuarios/crear" },
+      { label: "Lista", link: "/dashboard/usuarios" },
+      { label: "Crear", link: "/dashboard/usuarios/crear" },
     ],
   },
-
   {
     label: "Órdenes",
     icon: IconClipboardText,
