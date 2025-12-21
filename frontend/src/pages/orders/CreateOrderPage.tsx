@@ -20,7 +20,7 @@ type OrderItem = {
   description: string;
   quantity: number;
   width: number;
-  height: number;
+  calibre: number;
   length: number;
 };
 
@@ -44,7 +44,7 @@ export default function CreateOrderPage() {
   const [saving, setSaving] = useState(false);
 
   const [items, setItems] = useState<OrderItem[]>([
-    { description: "", quantity: 1, width: 0, height: 0, length: 0 },
+    { description: "", quantity: 1, width: 0, calibre: 0, length: 0 },
   ]);
 
   /* ======================
@@ -72,7 +72,7 @@ export default function CreateOrderPage() {
   const addItem = () => {
     setItems((prev) => [
       ...prev,
-      { description: "", quantity: 1, width: 0, height: 0, length: 0 },
+      { description: "", quantity: 1, width: 0, calibre: 0, length: 0 },
     ]);
   };
 
@@ -250,25 +250,28 @@ export default function CreateOrderPage() {
                     }
                   />
                   <NumberInput
-                    label="Ancho"
+                    label="Ancho/cm"
                     value={item.width}
                     onChange={(v) =>
                       updateItem(index, "width", Number(v) || 0)
                     }
                   />
+                  
                   <NumberInput
-                    label="Alto"
-                    value={item.height}
-                    onChange={(v) =>
-                      updateItem(index, "height", Number(v) || 0)
-                    }
-                  />
-                  <NumberInput
-                    label="Largo"
+                    label="Largo/cm"
                     value={item.length}
                     onChange={(v) =>
                       updateItem(index, "length", Number(v) || 0)
                     }
+                    />
+
+                    <NumberInput
+                    label="calibre/cm"
+                    value={item.calibre}
+                    onChange={(v) =>
+                      updateItem(index, "calibre", Number(v) || 0)
+                    }
+                  
                   />
                 </SimpleGrid>
 

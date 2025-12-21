@@ -6,13 +6,19 @@ import CreateOrderPage from "./pages/orders/CreateOrderPage";
 import OrdersListPage from "./pages/orders/OrdersListPage";
 import OrderDetailPage from "./pages/orders/OrderDetailPage";
 import OrderEditPage from "./pages/orders/OrderEditPage";
+import PrintOrderPage from "./pages/print/PrintOrderPage";
 
 export default function App() {
   return (
     <BrowserRouter>
       <Routes>
+        {/* LOGIN */}
         <Route path="/" element={<Login />} />
 
+        {/* 🔵 VISTA DE IMPRESIÓN (SIN DASHBOARD) */}
+        <Route path="/print/order/:id" element={<PrintOrderPage />} />
+
+        {/* DASHBOARD */}
         <Route path="/dashboard" element={<Dashboard />}>
           <Route index element={<DashboardHome />} />
 

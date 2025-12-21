@@ -19,7 +19,7 @@ class OrderItem extends Model
         'description',
         'quantity',
         'width',
-        'height',
+        'calibre',
         'length',
     ];
 }

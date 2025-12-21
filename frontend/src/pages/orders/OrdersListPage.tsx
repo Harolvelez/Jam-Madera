@@ -9,6 +9,7 @@ import {
   Button,
   Group,
   Modal,
+  Checkbox,
 } from "@mantine/core";
 import { useNavigate, useLocation } from "react-router-dom";
 import { notifications } from "@mantine/notifications";
@@ -18,6 +19,7 @@ type Order = {
   order_number: string;
   client_name: string | null;
   nit: string | null;
+  creation_date: string | null;
   estimated_delivery_date: string | null;
 };
 
@@ -28,16 +30,21 @@ export default function OrdersListPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // 🔴 Estado para eliminar
-  const [opened, setOpened] = useState(false);
-  const [orderToDelete, setOrderToDelete] = useState<Order | null>(null);
+  // selección múltiple
+  const [selectedIds, setSelectedIds] = useState<number[]>([]);
 
+  // modal confirmación
+  const [opened, setOpened] = useState(false);
+
+  /* ======================
+     CARGAR ÓRDENES
+  ====================== */
   useEffect(() => {
     setLoading(true);
 
     fetch("/api/orders")
       .then((res) => {
-        if (!res.ok) throw new Error("Error al cargar órdenes");
+        if (!res.ok) throw new Error();
         return res.json();
       })
       .then((data) => {
@@ -49,51 +56,57 @@ export default function OrdersListPage() {
           title: "Error",
           message: "No se pudieron cargar las órdenes",
           color: "red",
-          autoClose: 4000,
         });
         setLoading(false);
       });
   }, [location.key]);
 
-  // 🗑️ Abrir modal
-  const handleDeleteClick = (order: Order) => {
-    setOrderToDelete(order);
-    setOpened(true);
+  /* ======================
+     SELECCIÓN
+  ====================== */
+  const toggleSelect = (id: number) => {
+    setSelectedIds((prev) =>
+      prev.includes(id)
+        ? prev.filter((i) => i !== id)
+        : [...prev, id]
+    );
   };
 
-  // ✅ Confirmar eliminación (por ahora solo front)
+  /* ======================
+     ELIMINAR SELECCIONADAS
+  ====================== */
   const confirmDelete = async () => {
-  if (!orderToDelete) return;
+    try {
+      await Promise.all(
+        selectedIds.map((id) =>
+          fetch(`/api/orders/${id}`, { method: "DELETE" })
+        )
+      );
 
-  try {
-    const res = await fetch(`/api/orders/${orderToDelete.id}`, {
-      method: "DELETE",
-    });
+      setOrders((prev) =>
+        prev.filter((o) => !selectedIds.includes(o.id))
+      );
 
-    if (!res.ok) throw new Error();
+      notifications.show({
+        title: "Órdenes eliminadas",
+        message: "Las órdenes fueron eliminadas correctamente",
+        color: "green",
+      });
 
-    setOrders((prev) =>
-      prev.filter((o) => o.id !== orderToDelete.id)
-    );
+      setSelectedIds([]);
+      setOpened(false);
+    } catch {
+      notifications.show({
+        title: "Error",
+        message: "No se pudieron eliminar las órdenes",
+        color: "red",
+      });
+    }
+  };
 
-    notifications.show({
-      title: "Orden eliminada",
-      message: "La orden fue eliminada correctamente",
-      color: "green",
-    });
-
-    setOpened(false);
-    setOrderToDelete(null);
-  } catch {
-    notifications.show({
-      title: "Error",
-      message: "No se pudo eliminar la orden",
-      color: "red",
-    });
-  }
-};
-
-
+  /* ======================
+     LOADING
+  ====================== */
   if (loading) {
     return (
       <Center mt="xl">
@@ -102,9 +115,23 @@ export default function OrdersListPage() {
     );
   }
 
+  /* ======================
+     RENDER
+  ====================== */
   return (
     <>
-      <Title order={3} mb="md">Todas las Órdenes</Title>
+      <Title order={3} mb="md">
+        Todas las Órdenes
+      </Title>
+
+      {/* BOTÓN ELIMINAR MÚLTIPLE */}
+      {selectedIds.length > 0 && (
+        <Group mb="md">
+          <Button color="red" onClick={() => setOpened(true)}>
+            Eliminar seleccionadas ({selectedIds.length})
+          </Button>
+        </Group>
+      )}
 
       {orders.length === 0 ? (
         <Text>No hay órdenes registradas.</Text>
@@ -115,12 +142,31 @@ export default function OrdersListPage() {
               key={order.id}
               withBorder
               shadow="sm"
-              style={{ cursor: "pointer" }}
+              style={{
+                cursor: "pointer",
+                border: selectedIds.includes(order.id)
+                  ? "2px solid #4caf50"
+                  : undefined,
+              }}
               onClick={() =>
                 navigate(`/dashboard/orders/Detail/${order.id}`)
               }
             >
-              <Title order={5}>{order.order_number}</Title>
+              {/* HEADER CARD */}
+              <Group justify="space-between" mb="xs">
+                {/* CHECKBOX PROTEGIDO */}
+                <div
+                  onClick={(e) => e.stopPropagation()}
+                  onMouseDown={(e) => e.stopPropagation()}
+                >
+                  <Checkbox
+                    checked={selectedIds.includes(order.id)}
+                    onChange={() => toggleSelect(order.id)}
+                  />
+                </div>
+
+                <Title order={5}>{order.order_number}</Title>
+              </Group>
 
               <Text size="sm">
                 <strong>Cliente:</strong> {order.client_name || "-"}
@@ -131,11 +177,17 @@ export default function OrdersListPage() {
               </Text>
 
               <Text size="sm">
+                <strong>Fecha de creación:</strong>{" "}
+                {order.creation_date
+                  ? new Date(order.creation_date).toLocaleDateString("es-CO")
+                  : "-"}
+              </Text>
+
+              <Text size="sm">
                 <strong>Entrega estimada:</strong>{" "}
                 {order.estimated_delivery_date || "-"}
               </Text>
 
-              {/* 🔘 BOTONES */}
               <Group mt="md" grow>
                 <Button
                   variant="light"
@@ -146,33 +198,22 @@ export default function OrdersListPage() {
                 >
                   Editar
                 </Button>
-
-                <Button
-                  color="red"
-                  variant="light"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleDeleteClick(order);
-                  }}
-                >
-                  Eliminar
-                </Button>
               </Group>
             </Card>
           ))}
         </SimpleGrid>
       )}
 
-      {/* 🪟 MODAL CONFIRMACIÓN */}
+      {/* MODAL CONFIRMACIÓN */}
       <Modal
         opened={opened}
         onClose={() => setOpened(false)}
-        title="¿Eliminar orden?"
+        title="¿Eliminar órdenes?"
         centered
       >
         <Text mb="md">
-          ¿Estás seguro de eliminar la orden{" "}
-          <strong>{orderToDelete?.order_number}</strong>?
+          ¿Estás seguro de eliminar{" "}
+          <strong>{selectedIds.length}</strong> órdenes?
         </Text>
 
         <Group justify="flex-end">

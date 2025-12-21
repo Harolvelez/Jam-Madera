@@ -23,7 +23,7 @@ type OrderItem = {
   description: string;
   quantity: number;
   width: number;
-  height: number;
+  calibre: number;
   length: number;
 };
 
@@ -87,7 +87,7 @@ export default function OrderEditPage() {
   const addItem = () => {
     setItems((prev) => [
       ...prev,
-      { description: "", quantity: 1, width: 0, height: 0, length: 0 },
+      { description: "", quantity: 1, width: 0, calibre: 0, length: 0 },
     ]);
   };
 
@@ -267,19 +267,21 @@ export default function OrderEditPage() {
                     onChange={(v) =>
                       updateItem(index, "width", Number(v) || 0)
                     }
-                  />
-                  <NumberInput
-                    label="Alto"
-                    value={item.height}
-                    onChange={(v) =>
-                      updateItem(index, "height", Number(v) || 0)
-                    }
+                  
                   />
                   <NumberInput
                     label="Largo"
                     value={item.length}
                     onChange={(v) =>
                       updateItem(index, "length", Number(v) || 0)
+                    }
+                    
+                    />
+                  <NumberInput
+                    label="Calibre"
+                    value={item.calibre}
+                    onChange={(v) =>
+                      updateItem(index, "calibre", Number(v) || 0)
                     }
                   />
                 </SimpleGrid>

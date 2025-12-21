@@ -1,7 +1,13 @@
 import { useState } from "react";
-import { Group, Collapse, ThemeIcon, UnstyledButton, Text } from "@mantine/core";
+import {
+  Group,
+  Collapse,
+  ThemeIcon,
+  UnstyledButton,
+  Text,
+} from "@mantine/core";
 import { IconChevronRight } from "@tabler/icons-react";
-import { NavLink } from "react-router-dom"; // ✅
+import { NavLink, useNavigate } from "react-router-dom";
 import classes from "./SidebarNested.module.css";
 
 interface LinksGroupProps {
@@ -12,8 +18,16 @@ interface LinksGroupProps {
   link?: string;
 }
 
-export function LinksGroup({ icon: Icon, label, initiallyOpened, links, link }: LinksGroupProps) {
+export function LinksGroup({
+  icon: Icon,
+  label,
+  initiallyOpened,
+  links,
+  link,
+}: LinksGroupProps) {
   const [opened, setOpened] = useState(initiallyOpened || false);
+  const navigate = useNavigate();
+
   const hasLinks = Array.isArray(links);
 
   const items = (hasLinks ? links : []).map((l) => (
@@ -23,7 +37,11 @@ export function LinksGroup({ icon: Icon, label, initiallyOpened, links, link }: 
   ));
 
   const handleClick = () => {
-    if (hasLinks) setOpened((o) => !o);
+    if (hasLinks) {
+      setOpened((o) => !o);
+    } else if (link) {
+      navigate(link);
+    }
   };
 
   return (
@@ -51,13 +69,6 @@ export function LinksGroup({ icon: Icon, label, initiallyOpened, links, link }: 
       </UnstyledButton>
 
       {hasLinks && <Collapse in={opened}>{items}</Collapse>}
-
-      {/* ✅ Si es link simple (sin sublinks), lo hacemos clickeable */}
-      {!hasLinks && link && (
-        <NavLink to={link} className={classes.link} style={{ marginLeft: 44 }}>
-          Ir
-        </NavLink>
-      )}
     </>
   );
 }

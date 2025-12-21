@@ -23,7 +23,7 @@ type OrderItem = {
   description: string;
   quantity: number;
   width: number;
-  height: number;
+  calibre: number;
   length: number;
 };
 
@@ -32,9 +32,16 @@ type Order = {
   order_number: string;
   nit: string | null;
   client_name: string | null;
+  phone: string | null;
+  email: string | null;
+  ingreso_type: string | null;
+
+  creation_date: string | null;
   estimated_delivery_date: string | null;
+
   items: OrderItem[];
 };
+
 
 /* =========================
    COMPONENTE
@@ -141,27 +148,54 @@ export default function OrderDetailPage() {
           >
             Eliminar
           </Button>
+
+          <Button
+            color="green"
+            onClick={() =>
+              window.open(`/print/order/${order.id}`, "_blank")
+            }
+          >
+            Imprimir
+          </Button>
+
         </Group>
       </Group>
 
+
+
       {/* DATOS PRINCIPALES */}
       <SimpleGrid cols={{ base: 1, sm: 2 }} mb="md">
+        {/* DATOS DEL CLIENTE */}
         <Card withBorder>
-          <Text>
-            <strong>Cliente:</strong> {order.client_name || "-"}
-          </Text>
-          <Text>
-            <strong>NIT:</strong> {order.nit || "-"}
-          </Text>
+          <Text><strong>Cliente:</strong> {order.client_name || "-"}</Text>
+          <Text><strong>NIT:</strong> {order.nit || "-"}</Text>
+          <Text><strong>Teléfono:</strong> {order.phone || "-"}</Text>
+          <Text><strong>Email:</strong> {order.email || "-"}</Text>
         </Card>
 
+        {/* DATOS DE LA ORDEN */}
         <Card withBorder>
           <Text>
+            <strong>Tipo de ingreso:</strong>{" "}
+            {order.ingreso_type || "-"}
+          </Text>
+
+          <Text>
+            <strong>Fecha de creación:</strong>{" "}
+            {order.creation_date
+              ? new Date(order.creation_date).toLocaleDateString("es-CO")
+              : "-"}
+          </Text>
+
+          <Text>
             <strong>Entrega estimada:</strong>{" "}
-            {order.estimated_delivery_date || "-"}
+            {order.estimated_delivery_date
+              ? new Date(order.estimated_delivery_date).toLocaleDateString("es-CO")
+              : "-"}
           </Text>
         </Card>
       </SimpleGrid>
+
 
       <Divider my="md" label="Items de la orden" />
 
@@ -172,8 +206,8 @@ export default function OrderDetailPage() {
             <Table.Th>Descripción</Table.Th>
             <Table.Th>Cantidad</Table.Th>
             <Table.Th>Ancho</Table.Th>
-            <Table.Th>Alto</Table.Th>
             <Table.Th>Largo</Table.Th>
+            <Table.Th>Calibre</Table.Th>
           </Table.Tr>
         </Table.Thead>
 
@@ -183,8 +217,8 @@ export default function OrderDetailPage() {
               <Table.Td>{item.description}</Table.Td>
               <Table.Td>{item.quantity}</Table.Td>
               <Table.Td>{item.width}</Table.Td>
-              <Table.Td>{item.height}</Table.Td>
               <Table.Td>{item.length}</Table.Td>
+              <Table.Td>{item.calibre}</Table.Td>
             </Table.Tr>
           ))}
         </Table.Tbody>
@@ -204,10 +238,10 @@ export default function OrderDetailPage() {
               <strong>Ancho:</strong> {item.width}
             </Text>
             <Text>
-              <strong>Alto:</strong> {item.height}
+              <strong>Largo:</strong> {item.length}
             </Text>
             <Text>
-              <strong>Largo:</strong> {item.length}
+              <strong>Calibre:</strong> {item.calibre}
             </Text>
           </Card>
         ))}

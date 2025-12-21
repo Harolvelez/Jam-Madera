@@ -2,10 +2,8 @@ import {
   IconGauge,
   IconClipboardText,
   IconUsers,
-  IconFlag,
-  IconBell,
-  IconSettings,
   IconAlertCircle,
+  IconChecklist,
 } from "@tabler/icons-react";
 
 import { ScrollArea, Stack, Text } from "@mantine/core";
@@ -37,33 +35,29 @@ const menu = [
     ],
   },
 
-
-
-  
-
+   // ✅ NUEVO ÍTEM SIN SUBMENÚ
+  {
+    label: "Estado de órdenes",
+    icon: IconChecklist,
+    link: "/dashboard/order-status",
+  },
 
   {
     label: "Agenda y alertas",
-    icon: IconAlertCircle, // podríamos cambiar a otro icono si quieres
+    icon: IconAlertCircle,
     links: [
       { label: "Agenda", link: "/dashboard/agenda" },
       { label: "Alertas", link: "/dashboard/alertas" },
     ],
   },
 
-  {
-    label: "Configuraciones",
-    icon: IconSettings,
-    links: [
-      { label: "Preferencias", link: "/dashboard/config" },
-      { label: "Seguridad", link: "/dashboard/config/seguridad" },
-    ],
-  },
+ 
 ];
 
-
 export default function SidebarNested() {
-  const links = menu.map((item) => <LinksGroup {...item} key={item.label} />);
+  const links = menu.map((item) => (
+    <LinksGroup {...item} key={item.label} />
+  ));
 
   return (
     <nav className={classes.navbar}>

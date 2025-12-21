@@ -13,7 +13,7 @@ class OrderController extends Controller
     public function index()
     {
         // Devuelve lo necesario para el listado
-        return Order::select('id', 'order_number', 'client_name', 'nit', 'estimated_delivery_date')
+        return Order::select('id', 'order_number', 'client_name', 'nit',  'creation_date', 'estimated_delivery_date')
             ->orderBy('id', 'desc')
             ->get();
     }
@@ -54,7 +54,8 @@ class OrderController extends Controller
         'items.*.description' => 'required|string|max:255',
         'items.*.quantity' => 'required|integer|min:1',
         'items.*.width' => 'nullable|numeric',
-        'items.*.height' => 'nullable|numeric',
+        
+        'items.*.calibre' => 'nullable|numeric',
         'items.*.length' => 'nullable|numeric',
     ]);
 
@@ -84,7 +85,7 @@ class OrderController extends Controller
                 'description' => $item['description'],
                 'quantity' => $item['quantity'],
                 'width' => $item['width'] ?? 0,
-                'height' => $item['height'] ?? 0,
+                'calibre' => $item['calibre'] ?? 0,
                 'length' => $item['length'] ?? 0,
             ]);
         }
@@ -122,7 +123,7 @@ public function update(Request $request, Order $order)
         'items.*.description' => 'required|string',
         'items.*.quantity' => 'required|integer|min:1',
         'items.*.width' => 'nullable|numeric',
-        'items.*.height' => 'nullable|numeric',
+        'items.*.calibre' => 'nullable|numeric',
         'items.*.length' => 'nullable|numeric',
     ]);
 
