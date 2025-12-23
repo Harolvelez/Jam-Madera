@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import {
   Group,
+  Box,
   Collapse,
   ThemeIcon,
   UnstyledButton,
@@ -14,8 +15,8 @@ interface LinksGroupProps {
   icon: any;
   label: string;
   initiallyOpened?: boolean;
-  links?: { label: string; link: string }[];
   link?: string;
+  links?: { label: string; link: string }[];
 }
 
 export function LinksGroup({
@@ -27,38 +28,59 @@ export function LinksGroup({
 }: LinksGroupProps) {
   const navigate = useNavigate();
   const location = useLocation();
-
   const hasLinks = Array.isArray(links);
 
-  // 🔥 detectar activo
+  // 🔥 Detectar si algún hijo está activo
   const isChildActive =
     hasLinks &&
     links!.some((l) => location.pathname.startsWith(l.link));
 
-  const isActive =
-    link && location.pathname === link;
+  // 🔥 Detectar si este item está activo (para links directos)
+  const isActive = link && location.pathname === link;
 
   const [opened, setOpened] = useState(
-    initiallyOpened || isChildActive
+    initiallyOpened || isChildActive || false
   );
 
-  // 🔄 abrir automáticamente si estoy dentro
+  // 🔄 Abrir automáticamente si estoy dentro de los hijos
   useEffect(() => {
     if (isChildActive) setOpened(true);
   }, [isChildActive]);
 
-  const items = (hasLinks ? links : []).map((l) => {
-    const active = location.pathname === l.link;
-
+  // 🔹 CASO 1: LINK DIRECTO (sin submenú)
+  if (!hasLinks && link) {
     return (
       <NavLink
-        key={l.label}
-        to={l.link}
-        className={`${classes.link} ${
-          active ? classes.linkActive : ""
-        }`}
+        to={link}
+        className={({ isActive }) => 
+          `${classes.control} ${isActive ? classes.controlActive : ""}`
+        }
+        end
       >
-        {l.label}
+        <Group>
+          <ThemeIcon variant="light" size={30}>
+            <Icon size={18} />
+          </ThemeIcon>
+          <Text fw={isActive ? 600 : 400}>{label}</Text>
+        </Group>
+      </NavLink>
+    );
+  }
+
+  // 🔹 CASO 2: MENÚ CON SUB-LINKS
+  const items = (links ?? []).map((item) => {
+    const childActive = location.pathname === item.link;
+    
+    return (
+      <NavLink
+        key={item.label}
+        to={item.link}
+        className={({ isActive }) => 
+          `${classes.link} ${isActive ? classes.linkActive : ""}`
+        }
+        end
+      >
+        <Text fw={childActive ? 600 : 400}>{item.label}</Text>
       </NavLink>
     );
   });

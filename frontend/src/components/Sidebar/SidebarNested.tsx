@@ -2,8 +2,7 @@ import {
   IconGauge,
   IconClipboardText,
   IconUsers,
-  IconAlertCircle,
-  IconChecklist,
+  IconCalendar,
 } from "@tabler/icons-react";
 
 import { ScrollArea, Stack, Text } from "@mantine/core";
@@ -14,7 +13,7 @@ import { PERMISSIONS } from "../../config/permissions";
 import { canAccess } from "../../utils/auth";
 
 /* =========================
-   MENÚ CON PERMISOS
+   MENÚ FINAL LIMPIO
 ========================= */
 const menu = [
   // DASHBOARD (Admin / Gerente)
@@ -23,6 +22,14 @@ const menu = [
     icon: IconGauge,
     link: "/dashboard",
     roles: PERMISSIONS.DASHBOARD,
+  },
+
+  // AUDITORÍA (Admin / Gerente)
+  {
+    label: "Auditoría",
+    icon: IconGauge,
+    link: "/dashboard/auditoria",
+    roles: PERMISSIONS.AUDIT,
   },
 
   // USUARIOS (Admin / Gerente)
@@ -47,28 +54,20 @@ const menu = [
     ],
   },
 
-  // ESTADO DE ÓRDENES (TODOS)
+  // ESTADOS Y CALENDARIO (Admin / Gerente / Ventas)
   {
-    label: "Estado de órdenes",
-    icon: IconChecklist,
-    link: "/dashboard/order-status",
+    label: "Estados de órdenes", // <-- CAMBIÉ EL NOMBRE
+    icon: IconCalendar,
     roles: PERMISSIONS.ORDER_STATUS,
-  },
-
-  // AGENDA Y ALERTAS (Admin / Gerente / Ventas)
-  {
-    label: "Agenda y alertas",
-    icon: IconAlertCircle,
-    roles: PERMISSIONS.AGENDA_ALERTS,
     links: [
-      { label: "Agenda", link: "/dashboard/agenda" },
-      { label: "Alertas", link: "/dashboard/alertas" },
+      { label: "Tablero", link: "/dashboard/ordenes/estados" },
+      { label: "Calendario", link: "/dashboard/ordenes/calendario" },
     ],
   },
 ];
 
 export default function SidebarNested() {
-  // 🔐 Filtrar menú según rol
+  // 🔐 Filtrar menú según permisos
   const links = menu
     .filter((item) => canAccess(item.roles))
     .map((item) => <LinksGroup {...item} key={item.label} />);
