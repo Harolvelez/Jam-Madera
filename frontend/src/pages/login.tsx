@@ -16,9 +16,13 @@ export default function Login() {
         try {
             const res = await fetch("http://127.0.0.1:8000/api/login", {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
+                headers: {
+                    "Content-Type": "application/json",
+                    "Accept": "application/json",
+                },
                 body: JSON.stringify({ email, password }),
             });
+
 
             if (!res.ok) {
                 const err = await res.json();
@@ -27,6 +31,10 @@ export default function Login() {
 
             const data = await res.json();
             localStorage.setItem("token", data.token);
+            localStorage.setItem("user", JSON.stringify(data.user));
+            localStorage.setItem("last_activity", Date.now().toString());
+            // ⏱️ NUEVO: inicio de sesión
+            localStorage.setItem("session_start", Date.now().toString());
 
             window.location.href = "/dashboard";
         } catch (err: any) {
@@ -52,7 +60,7 @@ export default function Login() {
                 <form onSubmit={handleLogin}>
                     <TextInput
                         label="Correo electrónico"
-                        placeholder="admin@jam.com"
+                        placeholder="correo@gmail.com"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
                         required

@@ -27,13 +27,12 @@ export default function OrdersListPage() {
   const navigate = useNavigate();
   const location = useLocation();
 
+  const token = localStorage.getItem("token"); // ✅ AÑADIDO
+
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // selección múltiple
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
-
-  // modal confirmación
   const [opened, setOpened] = useState(false);
 
   /* ======================
@@ -42,7 +41,12 @@ export default function OrdersListPage() {
   useEffect(() => {
     setLoading(true);
 
-    fetch("/api/orders")
+    fetch("/api/orders", {
+      headers: {
+        Accept: "application/json",
+        Authorization: `Bearer ${token}`, // ✅ AÑADIDO
+      },
+    })
       .then((res) => {
         if (!res.ok) throw new Error();
         return res.json();
@@ -59,7 +63,7 @@ export default function OrdersListPage() {
         });
         setLoading(false);
       });
-  }, [location.key]);
+  }, [location.key, token]);
 
   /* ======================
      SELECCIÓN
@@ -79,7 +83,13 @@ export default function OrdersListPage() {
     try {
       await Promise.all(
         selectedIds.map((id) =>
-          fetch(`/api/orders/${id}`, { method: "DELETE" })
+          fetch(`/api/orders/${id}`, {
+            method: "DELETE",
+            headers: {
+              Accept: "application/json",
+              Authorization: `Bearer ${token}`, // ✅ AÑADIDO
+            },
+          })
         )
       );
 
@@ -124,7 +134,6 @@ export default function OrdersListPage() {
         Todas las Órdenes
       </Title>
 
-      {/* BOTÓN ELIMINAR MÚLTIPLE */}
       {selectedIds.length > 0 && (
         <Group mb="md">
           <Button color="red" onClick={() => setOpened(true)}>
@@ -152,9 +161,7 @@ export default function OrdersListPage() {
                 navigate(`/dashboard/orders/Detail/${order.id}`)
               }
             >
-              {/* HEADER CARD */}
               <Group justify="space-between" mb="xs">
-                {/* CHECKBOX PROTEGIDO */}
                 <div
                   onClick={(e) => e.stopPropagation()}
                   onMouseDown={(e) => e.stopPropagation()}
@@ -204,7 +211,6 @@ export default function OrdersListPage() {
         </SimpleGrid>
       )}
 
-      {/* MODAL CONFIRMACIÓN */}
       <Modal
         opened={opened}
         onClose={() => setOpened(false)}

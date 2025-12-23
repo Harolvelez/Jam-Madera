@@ -7,25 +7,32 @@ use Illuminate\Http\Request;
 
 class RoleMiddleware
 {
+    /**
+     * Manejo de roles por ID
+     * Ejemplo de uso:
+     * middleware => role:1,2
+     */
     public function handle(Request $request, Closure $next, ...$roles)
     {
         $user = $request->user();
 
+        // 🔒 No autenticado
         if (!$user) {
-            return response()->json(['message' => 'No autenticado'], 401);
+            return response()->json([
+                'message' => 'No autenticado'
+            ], 401);
         }
 
-        // roles pueden ser: [1, 2, 'ventas', 'producción']
+        // 🔐 Validar rol
         foreach ($roles as $role) {
-            if (is_numeric($role) && $user->role_id == $role) {
-                return $next($request);
-            }
-
-            if (!is_numeric($role) && $user->role && $user->role->name == $role) {
+            if ((int) $user->role_id === (int) $role) {
                 return $next($request);
             }
         }
 
-        return response()->json(['message' => 'No tienes permiso para esta acción'], 403);
+        // 🚫 No autorizado
+        return response()->json([
+            'message' => 'No tienes permiso para esta acción'
+        ], 403);
     }
 }

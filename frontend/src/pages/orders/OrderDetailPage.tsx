@@ -35,13 +35,10 @@ type Order = {
   phone: string | null;
   email: string | null;
   ingreso_type: string | null;
-
   creation_date: string | null;
   estimated_delivery_date: string | null;
-
   items: OrderItem[];
 };
-
 
 /* =========================
    COMPONENTE
@@ -50,10 +47,11 @@ export default function OrderDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
 
+  const token = localStorage.getItem("token"); // ✅ AÑADIDO
+
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // 🔴 modal eliminar
   const [opened, setOpened] = useState(false);
 
   if (!id || isNaN(Number(id))) {
@@ -64,7 +62,12 @@ export default function OrderDetailPage() {
   useEffect(() => {
     setLoading(true);
 
-    fetch(`/api/orders/${id}`)
+    fetch(`/api/orders/${id}`, {
+      headers: {
+        Accept: "application/json",
+        Authorization: `Bearer ${token}`, // ✅ AÑADIDO
+      },
+    })
       .then((res) => {
         if (!res.ok) throw new Error();
         return res.json();
@@ -82,13 +85,17 @@ export default function OrderDetailPage() {
         });
         setLoading(false);
       });
-  }, [id]);
+  }, [id, token]);
 
   /* ---------- Eliminar orden ---------- */
   const handleDelete = async () => {
     try {
       const res = await fetch(`/api/orders/${id}`, {
         method: "DELETE",
+        headers: {
+          Accept: "application/json",
+          Authorization: `Bearer ${token}`, // ✅ AÑADIDO
+        },
       });
 
       if (!res.ok) throw new Error();
@@ -127,7 +134,6 @@ export default function OrderDetailPage() {
   ========================= */
   return (
     <>
-      {/* TÍTULO + BOTONES */}
       <Group justify="space-between" mb="md">
         <Title order={3}>Orden {order.order_number}</Title>
 
@@ -157,15 +163,10 @@ export default function OrderDetailPage() {
           >
             Imprimir
           </Button>
-
         </Group>
       </Group>
 
-
-
-      {/* DATOS PRINCIPALES */}
       <SimpleGrid cols={{ base: 1, sm: 2 }} mb="md">
-        {/* DATOS DEL CLIENTE */}
         <Card withBorder>
           <Text><strong>Cliente:</strong> {order.client_name || "-"}</Text>
           <Text><strong>NIT:</strong> {order.nit || "-"}</Text>
@@ -173,20 +174,14 @@ export default function OrderDetailPage() {
           <Text><strong>Email:</strong> {order.email || "-"}</Text>
         </Card>
 
-        {/* DATOS DE LA ORDEN */}
         <Card withBorder>
-          <Text>
-            <strong>Tipo de ingreso:</strong>{" "}
-            {order.ingreso_type || "-"}
-          </Text>
-
+          <Text><strong>Tipo de ingreso:</strong> {order.ingreso_type || "-"}</Text>
           <Text>
             <strong>Fecha de creación:</strong>{" "}
             {order.creation_date
               ? new Date(order.creation_date).toLocaleDateString("es-CO")
               : "-"}
           </Text>
-
           <Text>
             <strong>Entrega estimada:</strong>{" "}
             {order.estimated_delivery_date
@@ -196,10 +191,8 @@ export default function OrderDetailPage() {
         </Card>
       </SimpleGrid>
 
-
       <Divider my="md" label="Items de la orden" />
 
-      {/* TABLA DESKTOP */}
       <Table striped highlightOnHover withTableBorder visibleFrom="sm">
         <Table.Thead>
           <Table.Tr>
@@ -210,7 +203,6 @@ export default function OrderDetailPage() {
             <Table.Th>Calibre</Table.Th>
           </Table.Tr>
         </Table.Thead>
-
         <Table.Tbody>
           {order.items.map((item) => (
             <Table.Tr key={item.id}>
@@ -224,36 +216,19 @@ export default function OrderDetailPage() {
         </Table.Tbody>
       </Table>
 
-      {/* MOBILE */}
       <SimpleGrid cols={1} spacing="sm" hiddenFrom="sm">
         {order.items.map((item) => (
           <Card key={item.id} withBorder>
-            <Text>
-              <strong>Descripción:</strong> {item.description}
-            </Text>
-            <Text>
-              <strong>Cantidad:</strong> {item.quantity}
-            </Text>
-            <Text>
-              <strong>Ancho:</strong> {item.width}
-            </Text>
-            <Text>
-              <strong>Largo:</strong> {item.length}
-            </Text>
-            <Text>
-              <strong>Calibre:</strong> {item.calibre}
-            </Text>
+            <Text><strong>Descripción:</strong> {item.description}</Text>
+            <Text><strong>Cantidad:</strong> {item.quantity}</Text>
+            <Text><strong>Ancho:</strong> {item.width}</Text>
+            <Text><strong>Largo:</strong> {item.length}</Text>
+            <Text><strong>Calibre:</strong> {item.calibre}</Text>
           </Card>
         ))}
       </SimpleGrid>
 
-      {/* MODAL CONFIRMACIÓN */}
-      <Modal
-        opened={opened}
-        onClose={() => setOpened(false)}
-        title="¿Eliminar orden?"
-        centered
-      >
+      <Modal opened={opened} onClose={() => setOpened(false)} title="¿Eliminar orden?" centered>
         <Text mb="md">
           ¿Estás seguro de eliminar la orden{" "}
           <strong>{order.order_number}</strong>?

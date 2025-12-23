@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Group,
   Collapse,
@@ -7,7 +7,7 @@ import {
   Text,
 } from "@mantine/core";
 import { IconChevronRight } from "@tabler/icons-react";
-import { NavLink, useNavigate } from "react-router-dom";
+import { NavLink, useNavigate, useLocation } from "react-router-dom";
 import classes from "./SidebarNested.module.css";
 
 interface LinksGroupProps {
@@ -25,16 +25,43 @@ export function LinksGroup({
   links,
   link,
 }: LinksGroupProps) {
-  const [opened, setOpened] = useState(initiallyOpened || false);
   const navigate = useNavigate();
+  const location = useLocation();
 
   const hasLinks = Array.isArray(links);
 
-  const items = (hasLinks ? links : []).map((l) => (
-    <NavLink key={l.label} to={l.link} className={classes.link}>
-      {l.label}
-    </NavLink>
-  ));
+  // 🔥 detectar activo
+  const isChildActive =
+    hasLinks &&
+    links!.some((l) => location.pathname.startsWith(l.link));
+
+  const isActive =
+    link && location.pathname === link;
+
+  const [opened, setOpened] = useState(
+    initiallyOpened || isChildActive
+  );
+
+  // 🔄 abrir automáticamente si estoy dentro
+  useEffect(() => {
+    if (isChildActive) setOpened(true);
+  }, [isChildActive]);
+
+  const items = (hasLinks ? links : []).map((l) => {
+    const active = location.pathname === l.link;
+
+    return (
+      <NavLink
+        key={l.label}
+        to={l.link}
+        className={`${classes.link} ${
+          active ? classes.linkActive : ""
+        }`}
+      >
+        {l.label}
+      </NavLink>
+    );
+  });
 
   const handleClick = () => {
     if (hasLinks) {
@@ -46,13 +73,20 @@ export function LinksGroup({
 
   return (
     <>
-      <UnstyledButton onClick={handleClick} className={classes.control}>
+      <UnstyledButton
+        onClick={handleClick}
+        className={`${classes.control} ${
+          isActive || isChildActive ? classes.controlActive : ""
+        }`}
+      >
         <Group justify="space-between">
           <Group>
             <ThemeIcon variant="light" size={30}>
               <Icon size={18} />
             </ThemeIcon>
-            <Text>{label}</Text>
+            <Text fw={isActive || isChildActive ? 600 : 400}>
+              {label}
+            </Text>
           </Group>
 
           {hasLinks && (
@@ -61,7 +95,6 @@ export function LinksGroup({
               size={16}
               style={{
                 transform: opened ? "rotate(90deg)" : "none",
-                transition: "transform 0.2s",
               }}
             />
           )}

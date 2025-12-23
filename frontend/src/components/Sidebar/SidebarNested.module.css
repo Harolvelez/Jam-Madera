@@ -40,3 +40,16 @@
 .link:hover {
   background-color: #e6e6e6;
 }
+
+/* 🔥 ACTIVO PADRE */
+.controlActive {
+  background-color: #e7f5ff;
+  color: #1c7ed6;
+}
+
+/* 🔥 ACTIVO HIJO */
+.linkActive {
+  background-color: #e7f5ff;
+  color: #1c7ed6;
+  font-weight: 600;
+}

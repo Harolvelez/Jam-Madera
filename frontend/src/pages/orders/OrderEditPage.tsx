@@ -31,10 +31,11 @@ export default function OrderEditPage() {
   const { id } = useParams();
   const navigate = useNavigate();
 
+  const token = localStorage.getItem("token"); // ✅ AÑADIDO
+
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
-  // 🔹 mismos estados que CreateOrderPage
   const [orderNumber, setOrderNumber] = useState("");
   const [nit, setNit] = useState("");
   const [clientName, setClientName] = useState("");
@@ -51,7 +52,12 @@ export default function OrderEditPage() {
      CARGAR ORDEN
   ====================== */
   useEffect(() => {
-    fetch(`/api/orders/${id}`)
+    fetch(`/api/orders/${id}`, {
+      headers: {
+        Accept: "application/json",
+        Authorization: `Bearer ${token}`, // ✅ AÑADIDO
+      },
+    })
       .then((res) => {
         if (!res.ok) throw new Error();
         return res.json();
@@ -79,7 +85,7 @@ export default function OrderEditPage() {
         });
         navigate("/dashboard/orders/OrderList");
       });
-  }, [id, navigate]);
+  }, [id, navigate, token]);
 
   /* ======================
      ITEMS
@@ -129,7 +135,11 @@ export default function OrderEditPage() {
     try {
       const res = await fetch(`/api/orders/${id}`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+          Authorization: `Bearer ${token}`, // ✅ AÑADIDO
+        },
         body: JSON.stringify(body),
       });
 
@@ -267,7 +277,6 @@ export default function OrderEditPage() {
                     onChange={(v) =>
                       updateItem(index, "width", Number(v) || 0)
                     }
-                  
                   />
                   <NumberInput
                     label="Largo"
@@ -275,8 +284,7 @@ export default function OrderEditPage() {
                     onChange={(v) =>
                       updateItem(index, "length", Number(v) || 0)
                     }
-                    
-                    />
+                  />
                   <NumberInput
                     label="Calibre"
                     value={item.calibre}

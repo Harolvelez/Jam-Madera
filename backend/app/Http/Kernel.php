@@ -48,36 +48,26 @@ class Kernel extends HttpKernel
             \Illuminate\Routing\Middleware\SubstituteBindings::class,
 
             // MUY IMPORTANTE: Sanctum para API
-            \Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful::class,
+            
         ],
     ];
 
     /**
      * Middleware individuales — usados en rutas.
      */
-    protected $routeMiddleware = [
-        'auth' => \App\Http\Middleware\Authenticate::class,
-        'auth.basic' => \Illuminate\Auth\Middleware\AuthenticateWithBasicAuth::class,
+    /**
+ * Alias de middleware (Laravel 10+)
+ */
+protected $middlewareAliases = [
+    'auth' => \App\Http\Middleware\Authenticate::class,
+    'auth.basic' => \Illuminate\Auth\Middleware\AuthenticateWithBasicAuth::class,
+    'guest' => \App\Http\Middleware\RedirectIfAuthenticated::class,
+    'can' => \Illuminate\Auth\Middleware\Authorize::class,
+    'throttle' => \Illuminate\Routing\Middleware\ThrottleRequests::class,
+    'bindings' => \Illuminate\Routing\Middleware\SubstituteBindings::class,
 
-        // Redirige si ya hay sesión iniciada
-        'guest' => \App\Http\Middleware\RedirectIfAuthenticated::class,
+    // 👇 ESTE ES EL IMPORTANTE
+    'role' => \App\Http\Middleware\RoleMiddleware::class,
+];
 
-        // Autorización por roles personalizados
-        'role' => \App\Http\Middleware\RoleMiddleware::class,
-
-        // Autorización por permisos (si lo agregas luego)
-        'can' => \Illuminate\Auth\Middleware\Authorize::class,
-
-        // Firmar URLs
-        'signed' => \Illuminate\Routing\Middleware\ValidateSignature::class,
-
-        // Rate limiting personalizado
-        'throttle' => \Illuminate\Routing\Middleware\ThrottleRequests::class,
-
-        // CORS para rutas específicas
-        'cors' => \Illuminate\Http\Middleware\HandleCors::class,
-
-        // Substituir bindings
-        'bindings' => \Illuminate\Routing\Middleware\SubstituteBindings::class,
-    ];
 }

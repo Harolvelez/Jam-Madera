@@ -4,69 +4,82 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Validation\ValidationException;
 use Illuminate\Support\Facades\Log;
-
+use Illuminate\Support\Facades\Validator;
 use App\Models\User;
 
 class AuthController extends Controller
 {
-    // LOGIN AVANZADO
+    // LOGIN API
     public function login(Request $request)
     {
-        Log::info('LOGIN: entrando al método', ['data' => $request->all()]);
+        Log::info('LOGIN: request recibido', $request->all());
 
-        Log::info('LOGIN: antes de validar');
-
-        $credentials = $request->validate([
-            'email' => ['required', 'email', 'exists:users,email'],
-            'password' => ['required', 'string', 'min:4'],
+        // ✅ VALIDACIÓN MANUAL (API FRIENDLY)
+        $validator = Validator::make($request->all(), [
+            'email' => ['required', 'email'],
+            'password' => ['required', 'string'],
         ]);
 
-        Log::info('LOGIN: después de validar, antes de buscar usuario');
+        if ($validator->fails()) {
+            Log::warning('LOGIN: validación fallida', $validator->errors()->toArray());
 
-        $user = User::where('email', $credentials['email'])->first();
-
-        Log::info('LOGIN: después de buscar usuario', ['user_id' => $user?->id]);
-
-        if (!$user || !Hash::check($credentials['password'], $user->password)) {
-            Log::info('LOGIN: credenciales incorrectas');
-            throw ValidationException::withMessages([
-                'email' => ['Credenciales incorrectas.'],
-            ]);
+            return response()->json([
+                'message' => 'Datos inválidos',
+                'errors' => $validator->errors(),
+            ], 422);
         }
 
-        Log::info('LOGIN: credenciales correctas, creando token');
+        $credentials = $validator->validated();
 
+        // ✅ BUSCAR USUARIO
+        $user = User::where('email', $credentials['email'])->first();
+
+        if (!$user || !Hash::check($credentials['password'], $user->password)) {
+            Log::warning('LOGIN: credenciales incorrectas', [
+                'email' => $credentials['email']
+            ]);
+
+            return response()->json([
+                'message' => 'Credenciales incorrectas',
+            ], 401);
+        }
+
+        // ✅ CREAR TOKEN
         $token = $user->createToken('api-token')->plainTextToken;
 
-        Log::info('LOGIN: token creado OK');
+        Log::info('LOGIN: token generado', ['user_id' => $user->id]);
 
         return response()->json([
             'message' => 'Login exitoso',
+            'token' => $token,
             'user' => [
-                'id'    => $user->id,
-                'name'  => $user->name,
-                'email' => $user->email,
-                'role_id' => $user->role_id,
-                'role' => $user->role->name ?? null,
+                'id'      => $user->id,
+                'name'    => $user->name,
+                'email'   => $user->email,
+                'role_id'=> $user->role_id,
+                'role'    => $user->role->name ?? null,
             ],
-            'token' => $token
-        ]);
+        ], 200);
     }
-
 
     // LOGOUT
     public function logout(Request $request)
     {
         $request->user()->currentAccessToken()->delete();
-        return response()->json(['message' => 'Sesión cerrada correctamente']);
+
+        return response()->json([
+            'message' => 'Sesión cerrada correctamente'
+        ]);
     }
 
-    // LOGOUT DE TODAS LAS SESIONES
+    // LOGOUT TODAS LAS SESIONES
     public function logoutAll(Request $request)
     {
         $request->user()->tokens()->delete();
-        return response()->json(['message' => 'Todas las sesiones cerradas']);
+
+        return response()->json([
+            'message' => 'Todas las sesiones cerradas'
+        ]);
     }
 }

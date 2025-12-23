@@ -28,6 +28,8 @@ export default function CreateOrderPage() {
   const navigate = useNavigate();
   const today = new Date().toISOString().split("T")[0];
 
+  const token = localStorage.getItem("token"); // ✅ YA LO TENÍAS
+
   /* ======================
      ESTADOS
   ====================== */
@@ -51,7 +53,12 @@ export default function CreateOrderPage() {
      NÚMERO DE ORDEN
   ====================== */
   useEffect(() => {
-    fetch("/api/orders-next-number")
+    fetch("/api/orders-next-number", {
+      headers: {
+        Accept: "application/json",
+        Authorization: `Bearer ${token}`, // ✅ AÑADIDO
+      },
+    })
       .then((res) => {
         if (!res.ok) throw new Error();
         return res.json();
@@ -64,7 +71,7 @@ export default function CreateOrderPage() {
           color: "red",
         });
       });
-  }, []);
+  }, [token]);
 
   /* ======================
      ITEMS
@@ -114,7 +121,11 @@ export default function CreateOrderPage() {
     try {
       const res = await fetch("/api/orders", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+          Authorization: `Bearer ${token}`, // ✅ AÑADIDO
+        },
         body: JSON.stringify(body),
       });
 
@@ -151,7 +162,6 @@ export default function CreateOrderPage() {
 
       <form onSubmit={handleSubmit}>
         <Stack gap="sm">
-          {/* NÚMERO */}
           <TextInput
             label="Número de orden"
             value={orderNumber}
@@ -159,7 +169,6 @@ export default function CreateOrderPage() {
             styles={{ input: { backgroundColor: "#f1f3f5" } }}
           />
 
-          {/* DATOS DEL CLIENTE */}
           <SimpleGrid cols={{ base: 1, md: 2 }}>
             <TextInput
               label="Nombre del cliente"
@@ -196,7 +205,6 @@ export default function CreateOrderPage() {
             />
           </SimpleGrid>
 
-          {/* INGRESO */}
           <Select
             label="Tipo de ingreso"
             data={[
@@ -208,7 +216,6 @@ export default function CreateOrderPage() {
             required
           />
 
-          {/* FECHAS */}
           <SimpleGrid cols={{ base: 1, md: 2 }}>
             <TextInput
               type="date"
@@ -227,7 +234,6 @@ export default function CreateOrderPage() {
 
           <Divider label="Items de la orden" />
 
-          {/* ITEMS */}
           {items.map((item, index) => (
             <Card key={index} withBorder>
               <Stack>
@@ -256,22 +262,19 @@ export default function CreateOrderPage() {
                       updateItem(index, "width", Number(v) || 0)
                     }
                   />
-                  
                   <NumberInput
                     label="Largo/cm"
                     value={item.length}
                     onChange={(v) =>
                       updateItem(index, "length", Number(v) || 0)
                     }
-                    />
-
-                    <NumberInput
-                    label="calibre/cm"
+                  />
+                  <NumberInput
+                    label="Calibre/cm"
                     value={item.calibre}
                     onChange={(v) =>
                       updateItem(index, "calibre", Number(v) || 0)
                     }
-                  
                   />
                 </SimpleGrid>
 
