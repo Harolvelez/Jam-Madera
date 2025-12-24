@@ -1,11 +1,59 @@
-import { AppShell, Burger, Group, Title, Text } from "@mantine/core";
+import {
+  AppShell,
+  Burger,
+  Group,
+  Title,
+  Text,
+  Menu,
+  Avatar,
+  UnstyledButton,
+} from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
-import SidebarNested  from "../components/Sidebar/SidebarNested"; // lo creamos en el siguiente paso
-
-
+import { Outlet } from "react-router-dom";
+import { IconLogout } from "@tabler/icons-react";
+import SidebarNested from "../components/Sidebar/SidebarNested";
+import { useEffect, useState } from "react";
 
 export default function Dashboard() {
   const [opened, { toggle }] = useDisclosure();
+
+  // ⏱️ tiempo de sesión en segundos
+  const [sessionSeconds, setSessionSeconds] = useState(0);
+
+  useEffect(() => {
+    let start = Number(localStorage.getItem("session_start"));
+
+    if (!start) {
+      start = Date.now();
+      localStorage.setItem("session_start", start.toString());
+    }
+
+    const interval = setInterval(() => {
+      const now = Date.now();
+      const diff = Math.floor((now - start) / 1000);
+      setSessionSeconds(diff);
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, []);
+
+
+
+  // 👤 Usuario logueado
+  const user = JSON.parse(localStorage.getItem("user") || "{}");
+
+  // 🚪 Logout
+  const handleLogout = () => {
+    localStorage.clear();
+    window.location.href = "/";
+  };
+
+  const formatTime = (seconds: number) => {
+    const minutes = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${minutes}:${secs.toString().padStart(2, "0")}`;
+  };
+
 
   return (
     <AppShell
@@ -17,28 +65,60 @@ export default function Dashboard() {
       }}
       padding="md"
     >
-      {/* HEADER */}
       <AppShell.Header>
         <Group h="100%" px="md" justify="space-between">
+          {/* IZQUIERDA */}
           <Group>
-            {/* Botón hamburguesa para móviles */}
             <Burger opened={opened} onClick={toggle} hiddenFrom="sm" size="sm" />
-            <Title order={4}>Jam Maderas </Title>
+            <Title order={4}>Jam Maderas</Title>
           </Group>
 
-          <Text size="sm">Usuario</Text>
+          {/* DERECHA — USUARIO */}
+          <Menu shadow="md" width={200}>
+            <Menu.Target>
+              <UnstyledButton>
+                <Group gap="sm">
+                  <Avatar radius="xl" color="blue">
+                    {user?.name?.charAt(0) || "U"}
+                  </Avatar>
+                  <Text size="sm" fw={500}>
+                    {user?.name || "Usuario"}
+                  </Text>
+                </Group>
+              </UnstyledButton>
+            </Menu.Target>
+
+            <Menu.Dropdown>
+              <Menu.Label>{user?.email}</Menu.Label>
+
+              <Menu.Item disabled>
+                <Text size="xs" c="dimmed">
+                  Sesión activa: {formatTime(sessionSeconds)}
+                </Text>
+              </Menu.Item>
+
+              <Menu.Divider />
+
+              <Menu.Item
+                color="red"
+                leftSection={<IconLogout size={14} />}
+                onClick={handleLogout}
+              >
+                Cerrar sesión
+              </Menu.Item>
+            </Menu.Dropdown>
+
+          </Menu>
         </Group>
       </AppShell.Header>
 
-      {/* SIDEBAR */}
       <AppShell.Navbar p="xs">
         <SidebarNested />
       </AppShell.Navbar>
 
       {/* CONTENIDO */}
       <AppShell.Main>
-        <Title order={3}>Bienvenido al Dashboard</Title>
-        <Text>Este será el contenido principal.</Text>
+        <Outlet />
       </AppShell.Main>
     </AppShell>
   );

@@ -13,16 +13,15 @@ class OrderCalendarController extends Controller
         $month = $request->query('month', now()->month);
 
         $orders = DB::table('orders as o')
-            ->join('clients as c', 'c.id', '=', 'o.client_id')
-            ->join('order_status as os', 'os.id', '=', 'o.status_id')
+            ->leftJoin('order_status as os', 'os.id', '=', 'o.status_id')
             ->whereYear('o.delivery_date', $year)
             ->whereMonth('o.delivery_date', $month)
             ->select(
                 'o.id',
                 'o.order_number',
                 'o.delivery_date',
-                'c.name as client',
-                'os.name as status'
+                'o.client_name as client',
+                DB::raw('COALESCE(os.name, o.simple_status) as status')
             )
             ->orderBy('o.delivery_date')
             ->get();

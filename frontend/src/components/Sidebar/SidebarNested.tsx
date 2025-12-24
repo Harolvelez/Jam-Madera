@@ -2,23 +2,35 @@ import {
   IconGauge,
   IconClipboardText,
   IconUsers,
-  IconFlag,
-  IconBell,
-  IconSettings,
-  IconAlertCircle,
+  IconCalendar,
 } from "@tabler/icons-react";
 
 import { ScrollArea, Stack, Text } from "@mantine/core";
 import { LinksGroup } from "./LinksGroup";
 import classes from "./SidebarNested.module.css";
 
+import { PERMISSIONS } from "../../config/permissions";
+import { canAccess } from "../../utils/auth";
+
+/* =========================
+   MENÚ FINAL LIMPIO
+========================= */
 const menu = [
+  // DASHBOARD (Admin / Gerente)
   {
     label: "Dashboard",
     icon: IconGauge,
-    link: "/dashboard/auditoria",
+    link: "/dashboard",
+    roles: PERMISSIONS.DASHBOARD,
   },
-  
+
+  // AUDITORÍA (Admin / Gerente)
+  {
+    label: "Auditoría",
+    icon: IconGauge,
+    link: "/dashboard/auditoria",
+    roles: PERMISSIONS.AUDIT,
+  },
   {
     label: "Clientes",
     icon: IconUsers,
@@ -26,36 +38,45 @@ const menu = [
       { label: "Crear o editar", link: "/dashboard/clientes" },
     ],
   },
+  // USUARIOS (Admin / Gerente)
   {
     label: "Usuarios",
     icon: IconUsers,
+    roles: PERMISSIONS.USERS,
     links: [
-      { label: "Lista", link: "/dashboard/usuarios" },
-      { label: "Crear", link: "/dashboard/usuarios/crear" },
-    ],
-  },
-  {
-    label: "Órdenes",
-    icon: IconClipboardText,
-    links: [
-      { label: "Todas las órdenes", link: "/dashboard/ordenes" },
-      { label: "Crear orden", link: "/dashboard/ordenes/crear" },
+      { label: "Lista de usuarios", link: "/dashboard/usuarios" },
+      { label: "Crear usuario", link: "/dashboard/usuarios/crear" },
     ],
   },
 
+  // ÓRDENES (Admin / Gerente / Ventas)
   {
-    label: "Estados y calendario",
-    icon: IconBell,
+    label: "Órdenes",
+    icon: IconClipboardText,
+    roles: PERMISSIONS.ORDERS,
     links: [
-      { label: "Estados de órdenes", link: "/dashboard/ordenes/estados" },
+      { label: "Todas las órdenes", link: "/dashboard/orders/OrderList" },
+      { label: "Crear orden", link: "/dashboard/orders/CreateOrder" },
+    ],
+  },
+
+  // ESTADOS Y CALENDARIO (Admin / Gerente / Ventas)
+  {
+    label: "Estados de órdenes", // <-- CAMBIÉ EL NOMBRE
+    icon: IconCalendar,
+    roles: PERMISSIONS.ORDER_STATUS,
+    links: [
+      { label: "Tablero", link: "/dashboard/ordenes/estados" },
       { label: "Calendario", link: "/dashboard/ordenes/calendario" },
     ],
   },
 ];
 
-
 export default function SidebarNested() {
-  const links = menu.map((item) => <LinksGroup {...item} key={item.label} />);
+  // 🔐 Filtrar menú según permisos
+  const links = menu
+    .filter((item) => canAccess(item.roles ?? []))
+    .map((item) => <LinksGroup {...item} key={item.label} />);
 
   return (
     <nav className={classes.navbar}>

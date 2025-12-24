@@ -57,7 +57,7 @@ export default function CreateOrderPage() {
   useEffect(() => {
     const token = localStorage.getItem("token");
 
-    fetch("http://127.0.0.1:8000/api/clients", {
+    fetch("https://vision.jammaderas.com/api/clients", {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then((res) => res.json())
@@ -115,7 +115,7 @@ export default function CreateOrderPage() {
     const token = localStorage.getItem("token");
 
     try {
-      const res = await fetch("http://127.0.0.1:8000/api/clients", {
+      const res = await fetch("https://vision.jammaderas.com/api/clients", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -165,7 +165,7 @@ export default function CreateOrderPage() {
     };
 
     try {
-      const res = await fetch("http://127.0.0.1:8000/api/orders", {
+      const res = await fetch("https://vision.jammaderas.com/api/orders", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

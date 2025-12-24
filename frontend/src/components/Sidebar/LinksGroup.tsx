@@ -1,6 +1,13 @@
-import { useState } from "react";
-import { Group, Box, Collapse, ThemeIcon, UnstyledButton, Text } from "@mantine/core";
+import { useState, useEffect } from "react";
+import {
+  Group,
+  Collapse,
+  ThemeIcon,
+  UnstyledButton,
+  Text,
+} from "@mantine/core";
 import { IconChevronRight } from "@tabler/icons-react";
+import { NavLink, useNavigate, useLocation } from "react-router-dom";
 import classes from "./SidebarNested.module.css";
 
 interface LinksGroupProps {
@@ -11,7 +18,6 @@ interface LinksGroupProps {
   links?: { label: string; link: string }[];
 }
 
-
 export function LinksGroup({
   icon: Icon,
   label,
@@ -19,64 +25,104 @@ export function LinksGroup({
   links,
   link,
 }: LinksGroupProps) {
-  const [opened, setOpened] = useState(initiallyOpened || false);
+  const navigate = useNavigate();
+  const location = useLocation();
   const hasLinks = Array.isArray(links);
 
-  // 🔹 CASO 1: link directo (ej: Estados de órdenes)
+  // 🔥 Detectar si algún hijo está activo
+  const isChildActive =
+    hasLinks &&
+    links!.some((l) => location.pathname.startsWith(l.link));
+
+  // 🔥 Detectar si este item está activo (para links directos)
+  const isActive = link && location.pathname === link;
+
+  const [opened, setOpened] = useState(
+    initiallyOpened || isChildActive || false
+  );
+
+  // 🔄 Abrir automáticamente si estoy dentro de los hijos
+  useEffect(() => {
+    if (isChildActive) setOpened(true);
+  }, [isChildActive]);
+
+  // 🔹 CASO 1: LINK DIRECTO (sin submenú)
   if (!hasLinks && link) {
     return (
-      <Text
-        component="a"
-        href={link}
-        className={classes.control}
+      <NavLink
+        to={link}
+        className={({ isActive }) => 
+          `${classes.control} ${isActive ? classes.controlActive : ""}`
+        }
+        end
       >
         <Group>
           <ThemeIcon variant="light" size={30}>
             <Icon size={18} />
           </ThemeIcon>
-          <Text>{label}</Text>
+          <Text fw={isActive ? 600 : 400}>{label}</Text>
         </Group>
-      </Text>
+      </NavLink>
     );
   }
 
-  // 🔹 CASO 2: menú con sub-links
-  const items = (links ?? []).map((item) => (
-    <Text
-      component="a"
-      href={item.link}
-      className={classes.link}
-      key={item.label}
-    >
-      {item.label}
-    </Text>
-  ));
+  // 🔹 CASO 2: MENÚ CON SUB-LINKS
+  const items = (links ?? []).map((item) => {
+    const childActive = location.pathname === item.link;
+    
+    return (
+      <NavLink
+        key={item.label}
+        to={item.link}
+        className={({ isActive }) => 
+          `${classes.link} ${isActive ? classes.linkActive : ""}`
+        }
+        end
+      >
+        <Text fw={childActive ? 600 : 400}>{item.label}</Text>
+      </NavLink>
+    );
+  });
+
+  const handleClick = () => {
+    if (hasLinks) {
+      setOpened((o) => !o);
+    } else if (link) {
+      navigate(link);
+    }
+  };
 
   return (
     <>
       <UnstyledButton
-        onClick={() => setOpened((o) => !o)}
-        className={classes.control}
+        onClick={handleClick}
+        className={`${classes.control} ${
+          isActive || isChildActive ? classes.controlActive : ""
+        }`}
       >
         <Group justify="space-between">
           <Group>
             <ThemeIcon variant="light" size={30}>
               <Icon size={18} />
             </ThemeIcon>
-            <Text>{label}</Text>
+            <Text fw={isActive || isChildActive ? 600 : 400}>
+              {label}
+            </Text>
           </Group>
 
-          <IconChevronRight
-            className={classes.chevron}
-            size={16}
-            style={{
-              transform: opened ? "rotate(90deg)" : "none",
-            }}
-          />
+          {hasLinks && (
+            <IconChevronRight
+              className={classes.chevron}
+              size={16}
+              style={{
+                transform: opened ? "rotate(90deg)" : "none",
+              }}
+            />
+          )}
         </Group>
       </UnstyledButton>
 
-      <Collapse in={opened}>{items}</Collapse>
+      {hasLinks && <Collapse in={opened}>{items}</Collapse>}
     </>
   );
 }
