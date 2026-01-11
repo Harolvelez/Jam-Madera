@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import {
   TextInput,
-  NumberInput,
   Button,
   Paper,
   Title,
@@ -13,25 +12,18 @@ import {
   Group,
   Loader,
   Center,
+  Textarea,
 } from "@mantine/core";
-import { IconPlus, IconTrash } from "@tabler/icons-react";
 import { useNavigate, useParams } from "react-router-dom";
 import { notifications } from "@mantine/notifications";
 
-type OrderItem = {
-  id?: number;
-  description: string;
-  quantity: number;
-  width: number;
-  calibre: number;
-  length: number;
-};
+
 
 export default function OrderEditPage() {
   const { id } = useParams();
   const navigate = useNavigate();
 
-  const token = localStorage.getItem("token"); // ✅ AÑADIDO
+  const token = localStorage.getItem("token");
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -42,11 +34,14 @@ export default function OrderEditPage() {
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
   const [ingresoType, setIngresoType] =
-    useState<"interno" | "externo">("interno");
+    useState<"Factura" | "Pedido">("Pedido");
   const [creationDate, setCreationDate] = useState("");
   const [estimatedDeliveryDate, setEstimatedDeliveryDate] = useState("");
+  const [numeroFactura, setNumeroFactura] = useState("");
+  const [metodoPago, setMetodoPago] = useState<"Banco" | "Efectivo" | "">("");
 
-  const [items, setItems] = useState<OrderItem[]>([]);
+  // 👉 ahora SOLO un texto
+  const [itemsText, setItemsText] = useState("");
 
   /* ======================
      CARGAR ORDEN
@@ -55,7 +50,7 @@ export default function OrderEditPage() {
     fetch(`/api/orders/${id}`, {
       headers: {
         Accept: "application/json",
-        Authorization: `Bearer ${token}`, // ✅ AÑADIDO
+        Authorization: `Bearer ${token}`,
       },
     })
       .then((res) => {
@@ -73,7 +68,14 @@ export default function OrderEditPage() {
         setEstimatedDeliveryDate(
           data.estimated_delivery_date?.slice(0, 10) ?? ""
         );
-        setItems(data.items);
+        setNumeroFactura(data.numero_factura ?? "");
+        setMetodoPago(data.metodo_pago ?? "");
+
+        // ✅ Unimos todos los items con salto de línea
+        setItemsText(
+          (data.items ?? []).map((it: any) => it.description).join("\n")
+        );
+
 
         setLoading(false);
       })
@@ -86,32 +88,6 @@ export default function OrderEditPage() {
         navigate("/dashboard/orders/OrderList");
       });
   }, [id, navigate, token]);
-
-  /* ======================
-     ITEMS
-  ====================== */
-  const addItem = () => {
-    setItems((prev) => [
-      ...prev,
-      { description: "", quantity: 1, width: 0, calibre: 0, length: 0 },
-    ]);
-  };
-
-  const removeItem = (index: number) => {
-    setItems((prev) => prev.filter((_, i) => i !== index));
-  };
-
-  const updateItem = <K extends keyof OrderItem>(
-    index: number,
-    field: K,
-    value: OrderItem[K]
-  ) => {
-    setItems((prev) => {
-      const copy = [...prev];
-      copy[index] = { ...copy[index], [field]: value };
-      return copy;
-    });
-  };
 
   /* ======================
      GUARDAR CAMBIOS
@@ -129,7 +105,15 @@ export default function OrderEditPage() {
       ingreso_type: ingresoType,
       creation_date: creationDate || null,
       estimated_delivery_date: estimatedDeliveryDate || null,
-      items,
+      numero_factura: numeroFactura || null,
+      metodo_pago: metodoPago || null,
+
+      // 👇 enviamos UN SOLO item
+      items: [
+        {
+          description: itemsText,
+        },
+      ],
     };
 
     try {
@@ -138,7 +122,7 @@ export default function OrderEditPage() {
         headers: {
           "Content-Type": "application/json",
           Accept: "application/json",
-          Authorization: `Bearer ${token}`, // ✅ AÑADIDO
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify(body),
       });
@@ -151,7 +135,7 @@ export default function OrderEditPage() {
         color: "green",
       });
 
-      navigate("/dashboard/orders/OrderList");
+      navigate(`/dashboard/orders/Detail/${id}`, { replace: true });
     } catch {
       notifications.show({
         title: "Error",
@@ -223,8 +207,8 @@ export default function OrderEditPage() {
           <Select
             label="Tipo de ingreso"
             data={[
-              { value: "interno", label: "Ingreso interno" },
-              { value: "externo", label: "Ingreso externo" },
+              { value: "Factura", label: "Factura" },
+              { value: "Pedido", label: "Pedido" },
             ]}
             value={ingresoType}
             onChange={(v) => setIngresoType(v as any)}
@@ -249,74 +233,42 @@ export default function OrderEditPage() {
             />
           </SimpleGrid>
 
+          <SimpleGrid cols={{ base: 1, md: 2 }}>
+            <TextInput
+              label="Número de factura"
+              value={numeroFactura}
+              onChange={(e) => setNumeroFactura(e.target.value)}
+              placeholder="Ej: FAC-001"
+            />
+
+            <Select
+              label="Método de pago"
+              placeholder="Seleccione método de pago"
+              data={[
+                { value: "Banco", label: "Banco" },
+                { value: "Efectivo", label: "Efectivo" },
+              ]}
+              value={metodoPago}
+              onChange={(v) => setMetodoPago(v as any)}
+              clearable
+            />
+          </SimpleGrid>
+
           <Divider label="Items de la orden" />
 
-          {items.map((item, index) => (
-            <Card key={index} withBorder>
-              <Stack>
-                <TextInput
-                  label="Descripción"
-                  value={item.description}
-                  onChange={(e) =>
-                    updateItem(index, "description", e.target.value)
-                  }
-                />
-
-                <SimpleGrid cols={{ base: 2, md: 4 }}>
-                  <NumberInput
-                    label="Cantidad"
-                    value={item.quantity}
-                    min={1}
-                    onChange={(v) =>
-                      updateItem(index, "quantity", Number(v) || 1)
-                    }
-                  />
-                  <NumberInput
-                    label="Ancho"
-                    value={item.width}
-                    onChange={(v) =>
-                      updateItem(index, "width", Number(v) || 0)
-                    }
-                  />
-                  <NumberInput
-                    label="Largo"
-                    value={item.length}
-                    onChange={(v) =>
-                      updateItem(index, "length", Number(v) || 0)
-                    }
-                  />
-                  <NumberInput
-                    label="Calibre"
-                    value={item.calibre}
-                    onChange={(v) =>
-                      updateItem(index, "calibre", Number(v) || 0)
-                    }
-                  />
-                </SimpleGrid>
-
-                {items.length > 1 && (
-                  <Group justify="flex-end">
-                    <Button
-                      color="red"
-                      size="xs"
-                      leftSection={<IconTrash size={14} />}
-                      onClick={() => removeItem(index)}
-                    >
-                      Quitar item
-                    </Button>
-                  </Group>
-                )}
-              </Stack>
-            </Card>
-          ))}
-
-          <Button
-            variant="light"
-            leftSection={<IconPlus size={14} />}
-            onClick={addItem}
-          >
-            Agregar item
-          </Button>
+          <Card withBorder>
+            <Textarea
+              label="Descripción de los items"
+              value={itemsText}
+              onChange={(e) => setItemsText(e.target.value)}
+              autosize
+              minRows={6}
+              placeholder={`Ejemplo:
+- Puerta en madera cedro
+- Marco reforzado
+- Acabado natural`}
+            />
+          </Card>
 
           <Group justify="flex-end">
             <Button variant="default" onClick={() => navigate(-1)}>

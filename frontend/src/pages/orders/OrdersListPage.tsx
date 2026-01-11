@@ -82,20 +82,29 @@ export default function OrdersListPage() {
   const confirmDelete = async () => {
     try {
       await Promise.all(
-        selectedIds.map((id) =>
-          fetch(`/api/orders/${id}`, {
+        selectedIds.map(async (id) => {
+          const res = await fetch(`/api/orders/${id}`, {
             method: "DELETE",
             headers: {
               Accept: "application/json",
-              Authorization: `Bearer ${token}`, // ✅ AÑADIDO
+              Authorization: `Bearer ${token}`,
             },
-          })
-        )
+          });
+
+          if (!res.ok) {
+            let errMsg = 'No se pudieron eliminar las órdenes';
+            try {
+              const json = await res.json();
+              if (json && json.message) errMsg = json.message;
+            } catch (e) {}
+            throw new Error(errMsg);
+          }
+
+          return id;
+        })
       );
 
-      setOrders((prev) =>
-        prev.filter((o) => !selectedIds.includes(o.id))
-      );
+      setOrders((prev) => prev.filter((o) => !selectedIds.includes(o.id)));
 
       notifications.show({
         title: "Órdenes eliminadas",
@@ -105,10 +114,10 @@ export default function OrdersListPage() {
 
       setSelectedIds([]);
       setOpened(false);
-    } catch {
+    } catch (err: any) {
       notifications.show({
         title: "Error",
-        message: "No se pudieron eliminar las órdenes",
+        message: err?.message || "No se pudieron eliminar las órdenes",
         color: "red",
       });
     }

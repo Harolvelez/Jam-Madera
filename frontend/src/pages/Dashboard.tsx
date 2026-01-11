@@ -15,7 +15,7 @@ import SidebarNested from "../components/Sidebar/SidebarNested";
 import { useEffect, useState } from "react";
 
 export default function Dashboard() {
-  const [opened, { toggle }] = useDisclosure();
+  const [opened, { toggle, close }] = useDisclosure();
 
   // ⏱️ tiempo de sesión en segundos
   const [sessionSeconds, setSessionSeconds] = useState(0);
@@ -37,8 +37,6 @@ export default function Dashboard() {
     return () => clearInterval(interval);
   }, []);
 
-
-
   // 👤 Usuario logueado
   const user = JSON.parse(localStorage.getItem("user") || "{}");
 
@@ -54,12 +52,11 @@ export default function Dashboard() {
     return `${minutes}:${secs.toString().padStart(2, "0")}`;
   };
 
-
   return (
     <AppShell
       header={{ height: 60 }}
       navbar={{
-        width: 260,
+        width: 300, // Cambié de 260 a 300 (más ancho)
         breakpoint: "sm",
         collapsed: { mobile: !opened },
       }}
@@ -107,13 +104,12 @@ export default function Dashboard() {
                 Cerrar sesión
               </Menu.Item>
             </Menu.Dropdown>
-
           </Menu>
         </Group>
       </AppShell.Header>
 
-      <AppShell.Navbar p="xs">
-        <SidebarNested />
+      <AppShell.Navbar p="md"> {/* Cambié de p="xs" a p="md" */}
+        <SidebarNested onLinkClick={close} />
       </AppShell.Navbar>
 
       {/* CONTENIDO */}

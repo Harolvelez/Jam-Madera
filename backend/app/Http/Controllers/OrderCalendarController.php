@@ -14,16 +14,17 @@ class OrderCalendarController extends Controller
 
         $orders = DB::table('orders as o')
             ->leftJoin('order_status as os', 'os.id', '=', 'o.status_id')
-            ->whereYear('o.delivery_date', $year)
-            ->whereMonth('o.delivery_date', $month)
+            // usar delivery_date si existe, sino estimated_delivery_date
+            ->whereRaw('year(COALESCE(o.delivery_date, o.estimated_delivery_date)) = ?', [$year])
+            ->whereRaw('month(COALESCE(o.delivery_date, o.estimated_delivery_date)) = ?', [$month])
             ->select(
                 'o.id',
                 'o.order_number',
-                'o.delivery_date',
+                DB::raw('COALESCE(o.delivery_date, o.estimated_delivery_date) as delivery_date'),
                 'o.client_name as client',
                 DB::raw('COALESCE(os.name, o.simple_status) as status')
             )
-            ->orderBy('o.delivery_date')
+            ->orderByRaw('COALESCE(o.delivery_date, o.estimated_delivery_date)')
             ->get();
 
         // Agrupar por día

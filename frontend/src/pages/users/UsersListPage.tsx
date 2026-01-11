@@ -98,7 +98,14 @@ export default function UsersListPage() {
         },
       });
 
-      if (!res.ok) throw new Error("No se pudo eliminar");
+      if (!res.ok) {
+        if (res.status === 422) {
+          throw new Error(
+            "No se puede eliminar este usuario porque tiene registros asociados en el historial de órdenes. Debe reasignar o eliminar esos registros primero."
+          );
+        }
+        throw new Error("No se pudo eliminar el usuario");
+      }
 
       notifications.show({
         title: "Listo",
@@ -109,9 +116,10 @@ export default function UsersListPage() {
       setUsers((prev) => prev.filter((x) => x.id !== userToDelete.id));
     } catch (e: any) {
       notifications.show({
-        title: "Error",
-        message: e.message || "Error eliminando",
+        title: "Error al eliminar",
+        message: e.message || "Error eliminando usuario",
         color: "red",
+        autoClose: 8000,
       });
     } finally {
       setOpened(false);

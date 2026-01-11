@@ -54,13 +54,13 @@ services:
       - jamnet
 
   # React Frontend
-  frontend:
-    build: ./frontend
-    container_name: jam_frontend
-    networks:
-      - jamnet
+  # frontend:
+  #   build: ./frontend
+  #   container_name: jam_frontend
+  #   networks:
+  #     - jamnet
 
-
+  
 networks:
   jamnet:
 

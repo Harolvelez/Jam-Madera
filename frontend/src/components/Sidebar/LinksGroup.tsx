@@ -16,6 +16,7 @@ interface LinksGroupProps {
   initiallyOpened?: boolean;
   link?: string;
   links?: { label: string; link: string }[];
+  onLinkClick?: () => void; // Añadí esta prop
 }
 
 export function LinksGroup({
@@ -24,6 +25,7 @@ export function LinksGroup({
   initiallyOpened,
   links,
   link,
+  onLinkClick, // Recibí la prop
 }: LinksGroupProps) {
   const navigate = useNavigate();
   const location = useLocation();
@@ -55,6 +57,7 @@ export function LinksGroup({
           `${classes.control} ${isActive ? classes.controlActive : ""}`
         }
         end
+        onClick={onLinkClick} // Añadí onClick
       >
         <Group>
           <ThemeIcon variant="light" size={30}>
@@ -78,6 +81,7 @@ export function LinksGroup({
           `${classes.link} ${isActive ? classes.linkActive : ""}`
         }
         end
+        onClick={onLinkClick} // Añadí onClick
       >
         <Text fw={childActive ? 600 : 400}>{item.label}</Text>
       </NavLink>
@@ -89,6 +93,7 @@ export function LinksGroup({
       setOpened((o) => !o);
     } else if (link) {
       navigate(link);
+      onLinkClick?.(); // Llamé a onLinkClick
     }
   };
 

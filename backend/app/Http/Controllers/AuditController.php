@@ -41,4 +41,24 @@ class AuditController extends Controller
                 ->paginate(20)
         );
     }
+
+    /**
+     * ✅ Eliminar historial por IDs (solo Admin/Gerente vía middleware)
+     * Body esperado:
+     * { "ids": [1,2,3] }
+     */
+    public function destroyMany(Request $request)
+    {
+        $data = $request->validate([
+            'ids' => ['required', 'array', 'min:1'],
+            'ids.*' => ['integer'],
+        ]);
+
+        $deleted = OrderStatusHistory::whereIn('id', $data['ids'])->delete();
+
+        return response()->json([
+            'message' => 'Historial eliminado',
+            'deleted' => $deleted,
+        ]);
+    }
 }

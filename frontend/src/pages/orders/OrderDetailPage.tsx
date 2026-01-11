@@ -3,7 +3,6 @@ import {
   Title,
   Text,
   Card,
-  Table,
   Loader,
   Divider,
   Center,
@@ -21,10 +20,6 @@ import { notifications } from "@mantine/notifications";
 type OrderItem = {
   id: number;
   description: string;
-  quantity: number;
-  width: number;
-  calibre: number;
-  length: number;
 };
 
 type Order = {
@@ -37,6 +32,8 @@ type Order = {
   ingreso_type: string | null;
   creation_date: string | null;
   estimated_delivery_date: string | null;
+  numero_factura: string | null;
+  metodo_pago: string | null;
   items: OrderItem[];
 };
 
@@ -47,11 +44,10 @@ export default function OrderDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
 
-  const token = localStorage.getItem("token"); // ✅ AÑADIDO
+  const token = localStorage.getItem("token");
 
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
-
   const [opened, setOpened] = useState(false);
 
   if (!id || isNaN(Number(id))) {
@@ -65,7 +61,7 @@ export default function OrderDetailPage() {
     fetch(`/api/orders/${id}`, {
       headers: {
         Accept: "application/json",
-        Authorization: `Bearer ${token}`, // ✅ AÑADIDO
+        Authorization: `Bearer ${token}`,
       },
     })
       .then((res) => {
@@ -81,7 +77,6 @@ export default function OrderDetailPage() {
           title: "Error",
           message: "No se pudo cargar la orden",
           color: "red",
-          autoClose: 4000,
         });
         setLoading(false);
       });
@@ -94,7 +89,7 @@ export default function OrderDetailPage() {
         method: "DELETE",
         headers: {
           Accept: "application/json",
-          Authorization: `Bearer ${token}`, // ✅ AÑADIDO
+          Authorization: `Bearer ${token}`,
         },
       });
 
@@ -134,6 +129,7 @@ export default function OrderDetailPage() {
   ========================= */
   return (
     <>
+      {/* ENCABEZADO */}
       <Group justify="space-between" mb="md">
         <Title order={3}>Orden {order.order_number}</Title>
 
@@ -166,6 +162,7 @@ export default function OrderDetailPage() {
         </Group>
       </Group>
 
+      {/* DATOS GENERALES */}
       <SimpleGrid cols={{ base: 1, sm: 2 }} mb="md">
         <Card withBorder>
           <Text><strong>Cliente:</strong> {order.client_name || "-"}</Text>
@@ -188,47 +185,37 @@ export default function OrderDetailPage() {
               ? new Date(order.estimated_delivery_date).toLocaleDateString("es-CO")
               : "-"}
           </Text>
+          <Text><strong>Número de factura:</strong> {order.numero_factura || "-"}</Text>
+          <Text><strong>Método de pago:</strong> {order.metodo_pago || "-"}</Text>
         </Card>
       </SimpleGrid>
 
+      {/* ITEMS (TEXTO LIBRE) */}
       <Divider my="md" label="Items de la orden" />
 
-      <Table striped highlightOnHover withTableBorder visibleFrom="sm">
-        <Table.Thead>
-          <Table.Tr>
-            <Table.Th>Descripción</Table.Th>
-            <Table.Th>Cantidad</Table.Th>
-            <Table.Th>Ancho</Table.Th>
-            <Table.Th>Largo</Table.Th>
-            <Table.Th>Calibre</Table.Th>
-          </Table.Tr>
-        </Table.Thead>
-        <Table.Tbody>
-          {order.items.map((item) => (
-            <Table.Tr key={item.id}>
-              <Table.Td>{item.description}</Table.Td>
-              <Table.Td>{item.quantity}</Table.Td>
-              <Table.Td>{item.width}</Table.Td>
-              <Table.Td>{item.length}</Table.Td>
-              <Table.Td>{item.calibre}</Table.Td>
-            </Table.Tr>
-          ))}
-        </Table.Tbody>
-      </Table>
+      <Card withBorder>
+        {order.items && order.items.length > 0 ? (
+          <Text size="sm" style={{ whiteSpace: "pre-line" }}>
+            {order.items
+              .flatMap((it) => String(it.description ?? "").split("\n"))
+              .map((line) =>
+                line.trim().replace(/^\s*[•\-\*\u2022]\s*/g, "")
+              )
+              .filter(Boolean)
+              .join("\n")}
+          </Text>
+        ) : (
+          <Text size="sm">—</Text>
+        )}
+      </Card>
 
-      <SimpleGrid cols={1} spacing="sm" hiddenFrom="sm">
-        {order.items.map((item) => (
-          <Card key={item.id} withBorder>
-            <Text><strong>Descripción:</strong> {item.description}</Text>
-            <Text><strong>Cantidad:</strong> {item.quantity}</Text>
-            <Text><strong>Ancho:</strong> {item.width}</Text>
-            <Text><strong>Largo:</strong> {item.length}</Text>
-            <Text><strong>Calibre:</strong> {item.calibre}</Text>
-          </Card>
-        ))}
-      </SimpleGrid>
-
-      <Modal opened={opened} onClose={() => setOpened(false)} title="¿Eliminar orden?" centered>
+      {/* MODAL ELIMINAR */}
+      <Modal
+        opened={opened}
+        onClose={() => setOpened(false)}
+        title="¿Eliminar orden?"
+        centered
+      >
         <Text mb="md">
           ¿Estás seguro de eliminar la orden{" "}
           <strong>{order.order_number}</strong>?

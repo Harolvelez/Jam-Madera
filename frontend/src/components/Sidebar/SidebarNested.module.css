@@ -17,11 +17,12 @@
   border-radius: 6px;
   color: #333;
   cursor: pointer;
-  transition: background 0.2s;
+  transition: background 0.2s, color 0.2s;
 }
 
+/* ✅ HOVER NARANJA SUAVE */
 .control:hover {
-  background-color: #e0e0e0;
+  background-color: #fff4e6; /* naranja suave (similar a Mantine orange.0) */
 }
 
 .chevron {
@@ -35,21 +36,30 @@
   color: #555;
   text-decoration: none;
   border-radius: 5px;
+  transition: background 0.2s, color 0.2s;
 }
 
+/* ✅ HOVER NARANJA SUAVE */
 .link:hover {
-  background-color: #e6e6e6;
+  background-color: #fff4e6; /* naranja suave */
 }
+
+/* =========================
+   ✅ ESTADOS ACTIVOS (SIN AZUL)
+========================= */
 
 /* 🔥 ACTIVO PADRE */
 .controlActive {
-  background-color: #e7f5ff;
-  color: #1c7ed6;
+  background-color: #fff4e6; /* naranja suave */
+  color: #e8590c;            /* naranja fuerte (similar a Mantine orange.7) */
+  font-weight: 600;
+  border-left: 4px solid #e8590c;
 }
 
 /* 🔥 ACTIVO HIJO */
 .linkActive {
-  background-color: #e7f5ff;
-  color: #1c7ed6;
+  background-color: #fff4e6; /* naranja suave */
+  color: #e8590c;            /* naranja fuerte */
   font-weight: 600;
+  border-left: 4px solid #e8590c;
 }

@@ -72,11 +72,22 @@ const menu = [
   },
 ];
 
-export default function SidebarNested() {
+// Añadí la interfaz para las props
+interface SidebarNestedProps {
+  onLinkClick?: () => void;
+}
+
+export default function SidebarNested({ onLinkClick }: SidebarNestedProps) {
   // 🔐 Filtrar menú según permisos
   const links = menu
     .filter((item) => canAccess(item.roles ?? []))
-    .map((item) => <LinksGroup {...item} key={item.label} />);
+    .map((item) => (
+      <LinksGroup 
+        {...item} 
+        key={item.label} 
+        onLinkClick={onLinkClick} // Pasé onLinkClick
+      />
+    ));
 
   return (
     <nav className={classes.navbar}>

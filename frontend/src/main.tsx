@@ -7,12 +7,17 @@ import "@mantine/core/styles.css";
 import "@mantine/notifications/styles.css";
 
 // 👉 Mantine
-import { MantineProvider } from "@mantine/core";
+import { MantineProvider, createTheme } from "@mantine/core";
 import { Notifications } from "@mantine/notifications";
+
+// ✅ Tema global: cambia azul por naranja
+const theme = createTheme({
+  primaryColor: "orange", // 👈 aquí está el cambio global
+});
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
-    <MantineProvider defaultColorScheme="light">
+    <MantineProvider theme={theme} defaultColorScheme="light">
       {/* 🔔 NOTIFICACIONES GLOBALES */}
       <Notifications position="top-right" />
 

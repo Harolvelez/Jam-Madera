@@ -28,10 +28,31 @@ export default function OrdersCalendar() {
   }, []);
 
   // Recargar cuando cambia el mes
+  // Mantener la firma que espera Mantine: (date: string)
   const handleMonthChange = (date: string) => {
     const newMonth = new Date(date);
     setCurrentMonth(newMonth);
     loadMonth(newMonth);
+  };
+
+  // Normalizar clave YYYY-MM-DD usando componentes de Date (evita offsets UTC)
+  const dateToKey = (d: string | Date) => {
+    // Si ya es la cadena YYYY-MM-DD que entrega Mantine, úsala tal cual
+    if (typeof d === "string" && /^\d{4}-\d{2}-\d{2}$/.test(d)) {
+      return d;
+    }
+
+    const date = d instanceof Date ? d : new Date(d);
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    return `${y}-${m}-${day}`;
+  };
+
+  // Convertir clave YYYY-MM-DD a Date construida por componentes (evita parsing ISO)
+  const keyToDate = (key: string) => {
+    const [y, m, d] = key.split("-").map((v) => parseInt(v, 10));
+    return new Date(y, (m || 1) - 1, d || 1);
   };
 
   async function loadMonth(date: Date) {
@@ -47,9 +68,9 @@ export default function OrdersCalendar() {
     }
   }
 
-  // Obtener órdenes para un día específico
-  const getOrdersForDay = (dateString: string) => {
-    const key = dayjs(dateString).format("YYYY-MM-DD");
+  // Obtener órdenes para un día específico (espera Date o key)
+  const getOrdersForDay = (dateLike: string | Date) => {
+    const key = dateToKey(dateLike);
     return data[key] ?? [];
   };
 
@@ -70,15 +91,24 @@ export default function OrdersCalendar() {
           <Grid.Col span={{ base: 12, md: 6 }}>
             <Calendar
               firstDayOfWeek={1}
-              getDayProps={(date) => ({
-                selected: selectedDay === date,
-                onClick: () => setSelectedDay(date),
-              })}
+              getDayProps={(date) => {
+                const key = dateToKey(date);
+                // construir un Date a partir de la clave para logging (evita parsing ISO que introduce UTC offset)
+                const dateObj = keyToDate(key);
+                return {
+                  selected: selectedDay === key,
+                  onClick: () => {
+                    console.debug("Calendar click", { date, dateObj: dateObj.toString(), key });
+                    setSelectedDay(key);
+                  },
+                };
+              }}
               onNextMonth={handleMonthChange}
               onPreviousMonth={handleMonthChange}
               renderDay={(date) => {
-                const orders = getOrdersForDay(date);
-                const day = new Date(date).getDate();
+                const key = dateToKey(date);
+                const orders = getOrdersForDay(key);
+                const day = keyToDate(key).getDate();
 
                 return (
                   <Indicator
@@ -109,9 +139,13 @@ export default function OrdersCalendar() {
               ) : (
                 <Stack gap="md">
                   <Group justify="space-between">
-                    <Text fw={600} size="lg">
-                      {dayjs(selectedDay).format("DD [de] MMMM, YYYY")}
-                    </Text>
+                      <Text fw={600} size="lg">
+                        {selectedDay
+                          ? dayjs(keyToDate(selectedDay)).format(
+                              "DD [de] MMMM, YYYY"
+                            )
+                          : ""}
+                      </Text>
                     <Badge size="lg" variant="light" color="blue">
                       {getOrdersForDay(selectedDay).length} órdenes
                     </Badge>

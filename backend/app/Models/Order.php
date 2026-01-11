@@ -23,6 +23,8 @@ class Order extends Model
         'ingreso_type',
         'creation_date',
         'estimated_delivery_date',
+        'numero_factura',
+        'metodo_pago',
         'simple_status',
         'status_id',
         'created_by',

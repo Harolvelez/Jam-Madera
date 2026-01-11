@@ -1,34 +1,22 @@
 import { useEffect, useState } from "react";
 import {
   TextInput,
-  NumberInput,
+  Textarea,
   Button,
   Paper,
   Title,
-  Card,
   Divider,
   Select,
   Stack,
   SimpleGrid,
-  Group,
 } from "@mantine/core";
-import { IconPlus, IconTrash } from "@tabler/icons-react";
 import { useNavigate } from "react-router-dom";
 import { notifications } from "@mantine/notifications";
-
-type OrderItem = {
-  description: string;
-  quantity: number;
-  width: number;
-  calibre: number;
-  length: number;
-};
 
 export default function CreateOrderPage() {
   const navigate = useNavigate();
   const today = new Date().toISOString().split("T")[0];
-
-  const token = localStorage.getItem("token"); // ✅ YA LO TENÍAS
+  const token = localStorage.getItem("token");
 
   /* ======================
      ESTADOS
@@ -38,16 +26,16 @@ export default function CreateOrderPage() {
   const [clientName, setClientName] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
-  const [ingresoType, setIngresoType] = useState<"interno" | "externo">(
-    "interno"
-  );
+  const [ingresoType, setIngresoType] =
+    useState<"Factura" | "Pedido">("Pedido");
   const [creationDate, setCreationDate] = useState(today);
   const [estimatedDeliveryDate, setEstimatedDeliveryDate] = useState("");
+  const [numeroFactura, setNumeroFactura] = useState("");
+  const [metodoPago, setMetodoPago] = useState<"Banco" | "Efectivo" | "">("");
   const [saving, setSaving] = useState(false);
 
-  const [items, setItems] = useState<OrderItem[]>([
-    { description: "", quantity: 1, width: 0, calibre: 0, length: 0 },
-  ]);
+  // 🆕 UN SOLO CAMPO PARA ITEMS
+  const [itemsText, setItemsText] = useState("");
 
   /* ======================
      NÚMERO DE ORDEN
@@ -56,13 +44,10 @@ export default function CreateOrderPage() {
     fetch("/api/orders-next-number", {
       headers: {
         Accept: "application/json",
-        Authorization: `Bearer ${token}`, // ✅ AÑADIDO
+        Authorization: `Bearer ${token}`,
       },
     })
-      .then((res) => {
-        if (!res.ok) throw new Error();
-        return res.json();
-      })
+      .then((res) => res.json())
       .then((data) => setOrderNumber(data.next))
       .catch(() => {
         notifications.show({
@@ -74,49 +59,38 @@ export default function CreateOrderPage() {
   }, [token]);
 
   /* ======================
-     ITEMS
-  ====================== */
-  const addItem = () => {
-    setItems((prev) => [
-      ...prev,
-      { description: "", quantity: 1, width: 0, calibre: 0, length: 0 },
-    ]);
-  };
-
-  const removeItem = (index: number) => {
-    setItems((prev) => prev.filter((_, i) => i !== index));
-  };
-
-  const updateItem = <K extends keyof OrderItem>(
-    index: number,
-    field: K,
-    value: OrderItem[K]
-  ) => {
-    setItems((prev) => {
-      const copy = [...prev];
-      copy[index] = { ...copy[index], [field]: value };
-      return copy;
-    });
-  };
-
-  /* ======================
      GUARDAR
   ====================== */
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSaving(true);
 
-    const body = {
-      order_number: orderNumber,
-      nit,
-      client_name: clientName,
-      phone,
-      email: email || null,
-      ingreso_type: ingresoType,
-      creation_date: creationDate || null,
-      estimated_delivery_date: estimatedDeliveryDate || null,
-      items,
-    };
+    // 🔥 CONVERTIR TEXTO EN ITEMS
+    const items = itemsText
+      .split("\n")
+      .map((line) =>
+        line
+          .trim()
+          .replace(/^\s*[•\-\*\u2022]\s*/g, "") // ✅ quita • - * al inicio
+      )
+      .filter(Boolean)
+      .map((description) => ({
+        description,
+        quantity: 1,
+        width: 0,
+        length: 0,
+        calibre: 0,
+      }));
+
+    if (items.length === 0) {
+      notifications.show({
+        title: "Atención",
+        message: "Debes ingresar al menos un ítem",
+        color: "yellow",
+      });
+      return;
+    }
+
+    setSaving(true);
 
     try {
       const res = await fetch("/api/orders", {
@@ -124,9 +98,21 @@ export default function CreateOrderPage() {
         headers: {
           "Content-Type": "application/json",
           Accept: "application/json",
-          Authorization: `Bearer ${token}`, // ✅ AÑADIDO
+          Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify(body),
+        body: JSON.stringify({
+          order_number: orderNumber,
+          nit,
+          client_name: clientName,
+          phone,
+          email: email || null,
+          ingreso_type: ingresoType,
+          creation_date: creationDate,
+          estimated_delivery_date: estimatedDeliveryDate || null,
+          numero_factura: numeroFactura || null,
+          metodo_pago: metodoPago || null,
+          items,
+        }),
       });
 
       if (!res.ok) throw new Error();
@@ -135,7 +121,6 @@ export default function CreateOrderPage() {
         title: "Orden creada",
         message: "La orden se guardó correctamente",
         color: "green",
-        autoClose: 2000,
       });
 
       navigate("/dashboard/orders/OrderList", { replace: true });
@@ -144,7 +129,6 @@ export default function CreateOrderPage() {
         title: "Error",
         message: "No se pudo guardar la orden",
         color: "red",
-        autoClose: 4000,
       });
     } finally {
       setSaving(false);
@@ -180,22 +164,17 @@ export default function CreateOrderPage() {
             <TextInput
               label="NIT"
               value={nit}
-              required
-              placeholder="900123456-7"
               onChange={(e) =>
                 setNit(e.target.value.replace(/[^a-zA-Z0-9\-]/g, ""))
               }
+              required
             />
 
             <TextInput
               label="Teléfono"
               value={phone}
+              onChange={(e) => setPhone(e.target.value.replace(/\D/g, ""))}
               required
-              inputMode="numeric"
-              placeholder="3001234567"
-              onChange={(e) =>
-                setPhone(e.target.value.replace(/\D/g, ""))
-              }
             />
 
             <TextInput
@@ -208,11 +187,11 @@ export default function CreateOrderPage() {
           <Select
             label="Tipo de ingreso"
             data={[
-              { value: "interno", label: "Ingreso interno" },
-              { value: "externo", label: "Ingreso externo" },
+              { value: "Factura", label: "Factura" },
+              { value: "Pedido", label: "Pedido" },
             ]}
             value={ingresoType}
-            onChange={(v) => setIngresoType(v as "interno" | "externo")}
+            onChange={(v) => setIngresoType(v as any)}
             required
           />
 
@@ -232,75 +211,42 @@ export default function CreateOrderPage() {
             />
           </SimpleGrid>
 
-          <Divider label="Items de la orden" />
+          <SimpleGrid cols={{ base: 1, md: 2 }}>
+            <TextInput
+              label="Número de factura"
+              value={numeroFactura}
+              onChange={(e) => setNumeroFactura(e.target.value)}
+              placeholder="Ej: FAC-001"
+            />
 
-          {items.map((item, index) => (
-            <Card key={index} withBorder>
-              <Stack>
-                <TextInput
-                  label="Descripción"
-                  value={item.description}
-                  onChange={(e) =>
-                    updateItem(index, "description", e.target.value)
-                  }
-                  required
-                />
+            <Select
+              label="Método de pago"
+              placeholder="Seleccione método de pago"
+              data={[
+                { value: "Banco", label: "Banco" },
+                { value: "Efectivo", label: "Efectivo" },
+              ]}
+              value={metodoPago}
+              onChange={(v) => setMetodoPago(v as any)}
+              clearable
+            />
+          </SimpleGrid>
 
-                <SimpleGrid cols={{ base: 2, md: 4 }} spacing="xs">
-                  <NumberInput
-                    label="Cantidad"
-                    value={item.quantity}
-                    min={1}
-                    onChange={(v) =>
-                      updateItem(index, "quantity", Number(v) || 1)
-                    }
-                  />
-                  <NumberInput
-                    label="Ancho/cm"
-                    value={item.width}
-                    onChange={(v) =>
-                      updateItem(index, "width", Number(v) || 0)
-                    }
-                  />
-                  <NumberInput
-                    label="Largo/cm"
-                    value={item.length}
-                    onChange={(v) =>
-                      updateItem(index, "length", Number(v) || 0)
-                    }
-                  />
-                  <NumberInput
-                    label="Calibre/cm"
-                    value={item.calibre}
-                    onChange={(v) =>
-                      updateItem(index, "calibre", Number(v) || 0)
-                    }
-                  />
-                </SimpleGrid>
+          <Divider label="Descripción de la orden" />
 
-                {items.length > 1 && (
-                  <Group justify="flex-end">
-                    <Button
-                      color="red"
-                      size="xs"
-                      leftSection={<IconTrash size={14} />}
-                      onClick={() => removeItem(index)}
-                    >
-                      Quitar item
-                    </Button>
-                  </Group>
-                )}
-              </Stack>
-            </Card>
-          ))}
-
-          <Button
-            variant="light"
-            leftSection={<IconPlus size={14} />}
-            onClick={addItem}
-          >
-            Agregar item
-          </Button>
+          <Textarea
+            label="Ítems"
+            placeholder={`Ejemplo:
+              • 10 tablas de pino 2x4
+              • Corte especial para puerta
+              • Madera tratada para exterior`}
+            autosize
+            minRows={8}
+            maxRows={14}
+            value={itemsText}
+            onChange={(e) => setItemsText(e.target.value)}
+            required
+          />
 
           <Button type="submit" size="md" loading={saving}>
             Guardar orden

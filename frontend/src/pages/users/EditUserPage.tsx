@@ -160,15 +160,18 @@ export default function EditUserPage() {
                         <Select
                             label="Rol"
                             value={roleId}
-                            onChange={(v) => setRoleId(v || roleId)}
-                            disabled={isAdminSelf} // 🔒 BLOQUEADO PARA ADMIN SUPREMO
+                            disabled={isAdminSelf}
                             data={[
+                                ...(isAdminSelf
+                                ? [{ value: "1", label: "Admin" }]
+                                : []),
                                 { value: "2", label: "Gerente" },
                                 { value: "3", label: "Ventas" },
                                 { value: "4", label: "Producción" },
                             ]}
-                            required
-                        />
+                            required={!isAdminSelf}
+                            />
+
                     </SimpleGrid>
 
                     <Group justify="flex-end" mt="md">
