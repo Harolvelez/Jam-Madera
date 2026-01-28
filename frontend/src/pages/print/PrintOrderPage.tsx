@@ -14,11 +14,6 @@ type Order = {
   items: OrderItem[];
 };
 
-/**
- * ✅ Parte un texto en líneas calculando el ancho real en px (simulando el wrap del ticket)
- * - Usa canvas measureText con la MISMA fuente del ticket
- * - Divide por palabras para no cortar feo
- */
 function wrapToLines(text: string, maxWidthPx: number, font: string) {
   const t = String(text ?? "").trim();
   if (!t) return [""];
@@ -42,7 +37,6 @@ function wrapToLines(text: string, maxWidthPx: number, font: string) {
     } else {
       if (current) lines.push(current);
 
-      // Si una palabra sola es más larga que el ancho, la cortamos por caracteres
       if (ctx.measureText(w).width > maxWidthPx) {
         let chunk = "";
         for (const ch of w) {
@@ -65,10 +59,6 @@ function wrapToLines(text: string, maxWidthPx: number, font: string) {
   return lines;
 }
 
-/**
- * ✅ Construye “tickets” por cantidad de líneas (no por cantidad de items)
- * - Así los ítems largos (3-4 líneas) siguen quedando bien.
- */
 function paginateByLines(
   items: OrderItem[],
   maxWidthPx: number,
@@ -85,9 +75,7 @@ function paginateByLines(
 
   const pushTicket = () => {
     if (padToFixed) {
-      while (currentTicket.length < maxItemLinesPerTicket) {
-        currentTicket.push(""); // relleno para mismo alto
-      }
+      while (currentTicket.length < maxItemLinesPerTicket) currentTicket.push("");
     }
     tickets.push(currentTicket);
     currentTicket = [];
@@ -108,10 +96,7 @@ function paginateByLines(
       currentTicket.push(...itemLines.slice(idx, idx + take));
       idx += take;
 
-      // Si aún faltan líneas del mismo item, seguimos en otro ticket
-      if (idx < itemLines.length) {
-        pushTicket();
-      }
+      if (idx < itemLines.length) pushTicket();
     }
   }
 
@@ -134,22 +119,18 @@ export default function PrintOrderPage() {
 
   if (!order) return null;
 
-  // ✅ Configurable
+  // ===== Config =====
   const TICKET_WIDTH_PX = 302; // ~80mm
-  const PADDING_X_PX = 12; // coincide con tu CSS padding: 15px 12px
+  const PADDING_X_PX = 10;
+  const PADDING_Y_PX = 6;
   const CONTENT_WIDTH_PX = TICKET_WIDTH_PX - PADDING_X_PX * 2;
 
-  // ✅ Fuente EXACTA usada en impresión (debe coincidir con CSS)
-  const FONT = "bold 18px 'Courier New', monospace";
+  // IMPORTANTE: debe coincidir con CSS para wrap por px
+  const FONT =
+    "600 15px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace";
 
-  // ✅ Ajusta hasta que el corte físico te quede perfecto
-  const MAX_ITEM_LINES_PER_TICKET = 10;
-
-  // ✅ Para que todos queden del mismo tamaño físico
+  const MAX_ITEM_LINES_PER_TICKET = 15;
   const PAD_TO_FIXED_LINES = true;
-
-  // Separador (una sola línea)
-  const singleLine = "--------------------------------------------------";
 
   const tickets = useMemo(() => {
     return paginateByLines(
@@ -163,14 +144,13 @@ export default function PrintOrderPage() {
 
   return (
     <>
-      {/* BOTÓN DE IMPRESIÓN */}
       <div style={{ padding: 8 }}>
         <button
           onClick={() => window.print()}
           style={{
             width: "100%",
-            padding: 14,
-            fontSize: 18,
+            padding: 12,
+            fontSize: 16,
             backgroundColor: "#2f9e44",
             color: "#fff",
             border: "none",
@@ -184,155 +164,125 @@ export default function PrintOrderPage() {
 
       <div className="print-container">
         <div className="ticket">
-          {tickets.map((lines, ticketIndex) => {
-            const isLast = ticketIndex === tickets.length - 1;
+          {tickets.map((lines, ticketIndex) => (
+            <div key={ticketIndex} className="ticket-block">
+              <div className="company-name">JAM MADERAS</div>
 
-            return (
-              <div key={ticketIndex} className="ticket-block">
-                {/* ENCABEZADO */}
-                <div className="company-name">JAM MADERAS</div>
+              <div className="rule" />
 
-                {/* ✅ SOLO 1 línea debajo del encabezado */}
-                <div className="separator">{singleLine}</div>
-
-                {/* INFO */}
-                <div className="order-info">
-                  <div>
-                    <span className="label">Orden:</span> {order.order_number}
-                  </div>
-                  <div>
-                    <span className="label">Cliente:</span>{" "}
-                    {order.client_name || "-"}
-                  </div>
-                  <div>
-                    <span className="label">Creación:</span>{" "}
-                    {order.creation_date
-                      ? new Date(order.creation_date).toLocaleDateString("es-CO")
-                      : "-"}
-                  </div>
-                  <div>
-                    <span className="label">Entrega:</span>{" "}
-                    {order.estimated_delivery_date
-                      ? new Date(order.estimated_delivery_date).toLocaleDateString(
-                          "es-CO"
-                        )
-                      : "-"}
-                  </div>
+              <div className="order-info">
+                <div>
+                  <span className="label">Orden:</span> {order.order_number}
                 </div>
-
-                {/* ✅ SOLO 1 línea después del bloque info */}
-                <div className="separator">{singleLine}</div>
-
-                {/* ITEMS (ya vienen “wrappeds” en líneas) */}
-                <div className="items-list">
-                  {lines.map((ln, i) => (
-                    <div key={i} className="item-line">
-                      {ln?.trim() ? ln : "\u00A0"}
-                    </div>
-                  ))}
+                <div>
+                  <span className="label">Cliente:</span> {order.client_name || "-"}
                 </div>
-
-                {/* ✅ FINAL: siempre 1 línea */}
-                <div className="separator">{singleLine}</div>
-
-                {/* ✅ SOLO SI VA A EMPEZAR OTRO BLOQUE: aquí sí ponemos la segunda línea (doble) */}
-                {!isLast && <div className="separator">{singleLine}</div>}
-
-                {/* Espacio mínimo para corte */}
-                <div className="cut-space" />
+                <div>
+                  <span className="label">Creación:</span>{" "}
+                  {order.creation_date
+                    ? (() => {
+                        const [y, m, d] = order.creation_date.split("-").map(Number);
+                        return new Date(y, m - 1, d).toLocaleDateString("es-CO");
+                      })()
+                    : "-"}
+                </div>
+                <div>
+                  <span className="label">Entrega:</span>{" "}
+                  {order.estimated_delivery_date
+                    ? (() => {
+                        const [y, m, d] = order.estimated_delivery_date.split("-").map(Number);
+                        return new Date(y, m - 1, d).toLocaleDateString("es-CO");
+                      })()
+                    : "-"}
+                </div>
               </div>
-            );
-          })}
+
+              <div className="rule" />
+
+              <div className="items-list">
+                {lines.map((ln, i) => (
+                  <div key={i} className="item-line">
+                    {ln?.trim() ? ln : "\u00A0"}
+                  </div>
+                ))}
+              </div>
+
+              <div className="rule" />
+              <div className="cut-space" />
+            </div>
+          ))}
         </div>
       </div>
 
       <style>
         {`
-        body {
-          margin: 0;
-          padding: 0;
-          background: #f5f5f5;
-        }
+        body { margin: 0; padding: 0; background: #f5f5f5; }
 
         .print-container {
           display: flex;
           justify-content: center;
-          padding: 20px;
+          padding: 16px;
           width: 100%;
         }
 
         .ticket {
           width: ${TICKET_WIDTH_PX}px;
-          background: white;
-          padding: 15px ${PADDING_X_PX}px;
-          font-family: 'Courier New', monospace;
-          font-size: 18px;
-          font-weight: bold;
-          line-height: 1.4;
-          border: 1px solid #ddd;
-          box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-          word-wrap: break-word;
-          overflow-wrap: break-word;
+          background: #fff;
+          padding: ${PADDING_Y_PX}px ${PADDING_X_PX}px;
+          font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
+          font-size: 15px;
+          font-weight: 600;
+          line-height: 1.22;
+          border: 1px solid #e9ecef;
+          box-shadow: 0 2px 8px rgba(0,0,0,0.08);
         }
 
         .ticket-block {
-          margin-bottom: 10px;
-          page-break-inside: avoid;
+          margin: 0 0 8px 0;
           break-inside: avoid;
+          page-break-inside: avoid;
         }
 
         .company-name {
-          font-size: 22px;
-          font-weight: 900;
+          font-size: 17px;
+          font-weight: 750;
           text-align: center;
           text-transform: uppercase;
-          margin-bottom: 10px;
-          letter-spacing: 1px;
+          margin: 0 0 6px 0;
+          letter-spacing: 0.5px;
         }
 
-        .separator {
-          text-align: center;
-          margin: 12px 0;
-          font-weight: bold;
+        /* ✅ Separador REAL (NO texto) -> coincide en impresión */
+        .rule {
+          height: 1px;
+          background: #000;
+          opacity: 0.7;
+          margin: 6px 0;
         }
 
-        .order-info {
-          margin: 15px 0;
-        }
+        .order-info { margin: 6px 0; }
+        .order-info div { margin-bottom: 3px; }
 
-        .order-info div {
-          margin-bottom: 8px;
-        }
+        .label { font-weight: 750; }
 
-        .label {
-          font-weight: 900;
-        }
+        .items-list { margin: 6px 0; }
 
-        .items-list {
-          margin: 15px 0;
-        }
-
-        /* ✅ Cada línea tiene altura consistente -> corte consistente */
         .item-line {
-          line-height: 1.5;
-          margin-bottom: 0px;
-          white-space: pre; /* importante: la línea ya viene “wrappeda” */
+          line-height: 1.2;
+          margin: 0;
+          white-space: pre;
         }
 
-        .cut-space {
-          height: 18px;
-        }
+        .cut-space { height: 10px; }
 
         @media print {
-          body, html {
+          html, body {
             margin: 0 !important;
             padding: 0 !important;
             background: white !important;
           }
 
-          button {
-            display: none !important;
-          }
+          button { display: none !important; }
 
           .print-container {
             display: block !important;
@@ -345,22 +295,19 @@ export default function PrintOrderPage() {
             width: ${TICKET_WIDTH_PX}px !important;
             min-width: ${TICKET_WIDTH_PX}px !important;
             max-width: ${TICKET_WIDTH_PX}px !important;
-            padding: 15px ${PADDING_X_PX}px !important;
+
+            padding: 4px ${PADDING_X_PX}px !important; /* top mínimo */
             margin: 0 !important;
             border: none !important;
             box-shadow: none !important;
-            position: absolute !important;
-            top: 0 !important;
-            left: 0 !important;
-            font-family: 'Courier New', monospace !important;
-            font-size: 18px !important;
-            font-weight: bold !important;
-            line-height: 1.4 !important;
+            position: static !important;
           }
 
+          /* NO forzamos page-break-after: evita feeds raros en térmicas */
           .ticket-block {
-            page-break-inside: avoid !important;
+            margin: 0 0 8px 0 !important;
             break-inside: avoid !important;
+            page-break-inside: avoid !important;
           }
 
           @page {

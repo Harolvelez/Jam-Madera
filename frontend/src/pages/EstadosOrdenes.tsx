@@ -1,8 +1,10 @@
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useLocation } from "react-router-dom";
 import {
   DndContext,
-  PointerSensor,
+  MouseSensor,
+  TouchSensor,
   useSensor,
   useSensors,
   DragOverlay,
@@ -13,6 +15,7 @@ import type { DragEndEvent } from "@dnd-kit/core";
 import OrderCard from "../components/OrderCard";
 import BoardColumn from "../components/BoardColumn";
 import { getOrderBoard, moveOrder } from "../services/orders.service";
+
 
 import {
   Box,
@@ -27,10 +30,17 @@ import {
   Text,
   Switch,
   Divider,
-  Badge, // ✅ para indicador de filtros + contador
+  Badge,
+  Affix,
+  Transition,
+  Notification,
+  Progress,
+  ActionIcon,
+  Paper,
 } from "@mantine/core";
 
-import { IconSearch, IconFilter, IconX } from "@tabler/icons-react";
+
+import { IconSearch, IconFilter, IconX, IconChevronUp } from "@tabler/icons-react";
 import * as XLSX from "xlsx-js-style";
 
 /**
@@ -41,8 +51,29 @@ const statusLabel: Record<string, string> = {
 };
 
 export default function EstadosOrdenes() {
+  const location = useLocation();
+  const presetApplied = useRef(false);
+
   const [board, setBoard] = useState<any[]>([]);
-  const sensors = useSensors(useSensor(PointerSensor));
+
+  // ✅ Sensores separados: MouseSensor para desktop, TouchSensor para móviles
+  const sensors = useSensors(
+    useSensor(MouseSensor, {
+      // Desktop: requiere mover 8px antes de activar drag
+      activationConstraint: {
+        distance: 8,
+      },
+    }),
+    useSensor(TouchSensor, {
+      // Móvil: requiere mantener presionado 800ms SIN moverse mucho
+      // Si mueve el dedo >15px durante el delay, se cancela el drag (permite scroll)
+      activationConstraint: {
+        delay: 800,
+        tolerance: 15,
+      },
+    })
+  );
+
   const [activeOrder, setActiveOrder] = useState<any | null>(null);
 
   // =========================
@@ -52,6 +83,17 @@ export default function EstadosOrdenes() {
   const [selectedStatuses, setSelectedStatuses] = useState<number[]>([]);
   const [startDate, setStartDate] = useState(""); // export
   const [endDate, setEndDate] = useState(""); // export
+  // ✅ NUEVO: estado para progreso de exportación
+  const [exporting, setExporting] = useState(false);
+  const [exportProgress, setExportProgress] = useState(0);
+  const [exportMsg, setExportMsg] = useState("");
+  // ✅ NUEVO: notificación flotante (minimizar/expandir)
+  const [exportToastMinimized, setExportToastMinimized] = useState(false);
+  // ✅ NUEVO: muestra “Archivo listo” unos segundos
+  const [exportDone, setExportDone] = useState(false);
+
+
+
 
   // =========================
   // ✅ Filtros tablero (modal)
@@ -76,6 +118,28 @@ export default function EstadosOrdenes() {
   useEffect(() => {
     loadBoard();
   }, []);
+
+  useEffect(() => {
+    const preset = (location.state as any)?.preset;
+    if (!preset) return;
+
+    // ✅ para que no se aplique dos veces
+    if (presetApplied.current) return;
+    presetApplied.current = true;
+
+    // ✅ primero limpia todo (así se aplica limpio)
+    clearBoardFilters();
+
+    if (preset === "overdue") {
+      setOnlyOverdue(true); // ✅ activa "Solo vencidas"
+    }
+
+    if (preset === "today") {
+      setQuickRange("today"); // ✅ solo filtra por hoy
+    }
+  }, [location.state, location.key]);
+
+
 
   async function loadBoard() {
     const data = await getOrderBoard();
@@ -189,7 +253,12 @@ export default function EstadosOrdenes() {
   // =========================
   // ✅ HELPERS DE FILTROS / BÚSQUEDA
   // =========================
-  function isOrderOverdue(order: any) {
+  function isOrderOverdue(order: any, statusName?: string) {
+    const key = (statusName ?? "").toLowerCase();
+
+    // ✅ En Entregado/Finalizado NUNCA cuenta como vencida
+    if (key === "finalizado" || key === "entregado") return false;
+
     if (!order.estimated_delivery_date) return false;
 
     const today = new Date();
@@ -197,6 +266,27 @@ export default function EstadosOrdenes() {
 
     const deliveryDate = new Date(order.estimated_delivery_date + "T00:00:00");
     return deliveryDate < today;
+  }
+
+  /**
+   * ✅ Verifica si una orden entregada tiene más de 10 días en esa columna
+   * Si tiene más de 10 días, se oculta del tablero
+   */
+  function isDeliveredOrderTooOld(order: any, statusName: string) {
+    // Solo aplica para la columna "finalizado" (que se muestra como "Entregado")
+    const key = (statusName ?? "").toLowerCase();
+    if (key !== "finalizado") return false;
+
+    // Si tiene historial de último cambio de estado, usamos esa fecha
+    const changedAt = order.last_status_history?.changed_at;
+    if (!changedAt) return false; // Si no hay fecha, mostramos la orden
+
+    const changedDate = new Date(changedAt);
+    const today = new Date();
+    const diffTime = today.getTime() - changedDate.getTime();
+    const diffDays = diffTime / (1000 * 60 * 60 * 24);
+
+    return diffDays > 10; // Si tiene más de 10 días, es "muy vieja"
   }
 
   function isOrderInRange(order: any) {
@@ -280,7 +370,9 @@ export default function EstadosOrdenes() {
         const orders = (status.orders ?? []).filter((order: any) => {
           if (!matchesSearch(order)) return false;
           if (!isOrderInRange(order)) return false;
-          if (onlyOverdue && !isOrderOverdue(order)) return false;
+          if (onlyOverdue && !isOrderOverdue(order, status.name)) return false;
+          // ✅ Ocultar órdenes entregadas con más de 10 días
+          if (isDeliveredOrderTooOld(order, status.name)) return false;
           return true;
         });
 
@@ -331,106 +423,211 @@ export default function EstadosOrdenes() {
   // =========================
   // ✅ EXPORT EXCEL
   // =========================
-  function exportToExcel() {
-    const rows: any[] = [];
+  async function exportToExcel() {
+    // ✅ Evita doble clic
+    if (exporting) return;
 
-    board.forEach((status) => {
-      if (!selectedStatuses.includes(status.id)) return;
+    setExporting(true);
+    setExportDone(false);
+    setExportProgress(0);
+    setExportMsg("Preparando datos...");
+    setExportToastMinimized(false);
 
-      status.orders.forEach((order: any) => {
-        if (order.estimated_delivery_date) {
-          const deliveryDate = new Date(order.estimated_delivery_date + "T00:00:00");
+    const ROWS_PER_SHEET = 50000;
 
-          if (startDate) {
-            const start = new Date(startDate + "T00:00:00");
-            if (deliveryDate < start) return;
-          }
-
-          if (endDate) {
-            const end = new Date(endDate + "T23:59:59");
-            if (deliveryDate > end) return;
-          }
-        }
-
-        rows.push({
-          Estado: statusLabel[(status.name ?? "").toLowerCase()] ?? status.name,
-          Orden: order.order_number,
-          Cliente: order.client_name ?? "",
-          NIT: order.nit ?? "",
-          Teléfono: order.phone ?? "",
-          Correo: order.email ?? "",
-          "Fecha creación": order.creation_date ?? "",
-          "Entrega estimada": order.estimated_delivery_date ?? "",
-          "Número factura": order.numero_factura ?? "",
-          "Método de pago": order.metodo_pago ?? "",
-        });
-      });
-    });
-
-    // ✅ Si no hay filas, no crear archivo
-    if (rows.length === 0) {
-      alert("No hay órdenes para exportar con esos filtros.");
-      return;
-    }
-
-    const worksheet = XLSX.utils.json_to_sheet(rows);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Órdenes");
-
-    // Encabezados negrita
-    const headers = Object.keys(rows[0] || {});
-    headers.forEach((_, colIndex) => {
-      const cellRef = XLSX.utils.encode_cell({ r: 0, c: colIndex });
-      if (!worksheet[cellRef]) return;
-
-      worksheet[cellRef].s = {
-        font: { bold: true },
-        alignment: { horizontal: "center" },
-      };
-    });
-
-    // Colores por estado (Estado col A)
     const statusColors: any = {
       creado: "D9C2E9",
       producción: "FFF2CC",
+      pintura: "FFB41E",
       terminado: "9DC3E6",
+      instalacion: "00CDB4",
       entregado: "C6EFCE",
     };
 
-    rows.forEach((row, rowIndex) => {
-      const color = statusColors[row.Estado?.toLowerCase()];
-      if (!color) return;
+    const yieldToUI = () => new Promise((r) => setTimeout(r, 0));
 
-      const cellRef = XLSX.utils.encode_cell({ r: rowIndex + 1, c: 0 });
-      const cell = worksheet[cellRef];
-      if (!cell) return;
+    try {
+      // 1) Contar total exportable (para progreso real)
+      let total = 0;
 
-      cell.s = {
-        fill: { patternType: "solid", fgColor: { rgb: color } },
-        font: { bold: true },
-        alignment: { horizontal: "center" },
+      for (const status of board) {
+        if (!selectedStatuses.includes(status.id)) continue;
+
+        for (const order of status.orders || []) {
+          if (order.estimated_delivery_date) {
+            const deliveryDate = new Date(order.estimated_delivery_date + "T00:00:00");
+
+            if (startDate) {
+              const start = new Date(startDate + "T00:00:00");
+              if (deliveryDate < start) continue;
+            }
+
+            if (endDate) {
+              const end = new Date(endDate + "T23:59:59");
+              if (deliveryDate > end) continue;
+            }
+          }
+          total++;
+        }
+      }
+
+      if (total === 0) {
+        alert("No hay órdenes para exportar con esos filtros.");
+        return;
+      }
+
+      setExportMsg(`Generando Excel (${total} filas)...`);
+      setExportProgress(1);
+
+      // 2) Crear workbook y armar por hojas
+      const workbook = XLSX.utils.book_new();
+
+      let sheetIndex = 1;
+      let chunkRows: any[] = [];
+      let processed = 0;
+
+      const flushChunkToSheet = async () => {
+        if (chunkRows.length === 0) return;
+
+        const worksheet = XLSX.utils.json_to_sheet(chunkRows);
+
+        // Encabezados negrita
+        const headers = Object.keys(chunkRows[0] || {});
+        headers.forEach((_, colIndex) => {
+          const cellRef = XLSX.utils.encode_cell({ r: 0, c: colIndex });
+          if (!worksheet[cellRef]) return;
+
+          worksheet[cellRef].s = {
+            font: { bold: true },
+            alignment: { horizontal: "center" },
+          };
+        });
+
+        // Colores por estado (Estado col A)
+        chunkRows.forEach((row, rowIndex) => {
+          const color = statusColors[String(row.Estado ?? "").toLowerCase()];
+          if (!color) return;
+
+          const cellRef = XLSX.utils.encode_cell({ r: rowIndex + 1, c: 0 });
+          const cell = worksheet[cellRef];
+          if (!cell) return;
+
+          cell.s = {
+            fill: { patternType: "solid", fgColor: { rgb: color } },
+            font: { bold: true },
+            alignment: { horizontal: "center" },
+          };
+        });
+
+        // Auto-size (acotado para que sea rápido)
+        worksheet["!cols"] = headers.map((header) => ({
+          wch: Math.max(
+            header.length + 2,
+            ...chunkRows
+              .slice(0, 2000)
+              .map((r) => String(r[header] ?? "").length + 2)
+          ),
+        }));
+
+        // ✅ Nombre de hoja como pediste
+        XLSX.utils.book_append_sheet(workbook, worksheet, `Hoja ${sheetIndex}`);
+
+        sheetIndex++;
+        chunkRows = [];
+        await yieldToUI();
       };
-    });
 
-    // Auto-size de columnas
-    worksheet["!cols"] = headers.map((header) => ({
-      wch: Math.max(
-        header.length + 2,
-        ...rows.map((r) => String(r[header] ?? "").length + 2)
-      ),
-    }));
+      // 3) Construir filas y volcar por hojas
+      for (const status of board) {
+        if (!selectedStatuses.includes(status.id)) continue;
 
-    XLSX.writeFile(workbook, "ordenes.xlsx", {
-      bookType: "xlsx",
-      cellStyles: true,
-    });
+        for (const order of status.orders || []) {
+          if (order.estimated_delivery_date) {
+            const deliveryDate = new Date(order.estimated_delivery_date + "T00:00:00");
 
-    // Reset del modal export
-    setExportOpen(false);
-    setSelectedStatuses([]);
-    setStartDate("");
-    setEndDate("");
+            if (startDate) {
+              const start = new Date(startDate + "T00:00:00");
+              if (deliveryDate < start) continue;
+            }
+
+            if (endDate) {
+              const end = new Date(endDate + "T23:59:59");
+              if (deliveryDate > end) continue;
+            }
+          }
+
+          chunkRows.push({
+            Estado: statusLabel[(status.name ?? "").toLowerCase()] ?? status.name,
+            Orden: order.order_number,
+            Cliente: order.client_name ?? "",
+            NIT: order.nit ?? "",
+            Teléfono: order.phone ?? "",
+            Correo: order.email ?? "",
+            "Fecha creación": order.creation_date ?? "",
+            "Entrega estimada": order.estimated_delivery_date ?? "",
+            "Número factura": order.numero_factura ?? "",
+            "Método de pago": order.metodo_pago ?? "",
+          });
+
+          processed++;
+
+          if (processed % 250 === 0) {
+            const p = Math.min(99, Math.floor((processed / total) * 100));
+            setExportProgress(p);
+            setExportMsg(`Procesando ${processed} de ${total}...`);
+            await yieldToUI();
+          }
+
+          if (chunkRows.length >= ROWS_PER_SHEET) {
+            setExportMsg(`Creando Hoja ${sheetIndex}...`);
+            await flushChunkToSheet();
+          }
+        }
+      }
+
+      // Volcar lo que quede
+      setExportMsg("Finalizando hojas...");
+      await flushChunkToSheet();
+
+      setExportProgress(99);
+      setExportMsg("Generando archivo...");
+
+      XLSX.writeFile(workbook, "ordenes.xlsx", {
+        bookType: "xlsx",
+        cellStyles: true,
+      });
+
+      // ✅ Mostrar “listo” 3 segundos
+      setExportProgress(100);
+      setExportMsg("✅ Archivo listo");
+      setExportDone(true);
+
+      // Reset del modal export
+      setExportOpen(false);
+      setSelectedStatuses([]);
+      setStartDate("");
+      setEndDate("");
+
+      setTimeout(() => {
+        setExportDone(false);
+        setExporting(false);
+        setExportProgress(0);
+        setExportMsg("");
+        setExportToastMinimized(false);
+      }, 3000);
+    } catch (err) {
+      console.error("Error exportando Excel:", err);
+      setExportMsg("❌ Error al generar el Excel");
+      setExportProgress(0);
+
+      // deja el toast visible para que el usuario lo vea (y pueda minimizar)
+      setTimeout(() => {
+        setExporting(false);
+        setExportDone(false);
+      }, 2000);
+    }
   }
+
 
   function clearBoardFilters() {
     setFilterStatuses([]);
@@ -710,20 +907,101 @@ export default function EstadosOrdenes() {
             />
           ))}
 
+
+
+
           <Group justify="flex-end">
-            <Button variant="default" onClick={() => setExportOpen(false)}>
+            <Button
+              variant="default"
+              onClick={() => setExportOpen(false)}
+              disabled={exporting}
+            >
               Cancelar
             </Button>
+
             <Button
               color="green"
-              disabled={selectedStatuses.length === 0}
+              disabled={selectedStatuses.length === 0 || exporting}
               onClick={exportToExcel}
             >
-              Exportar
+              {exporting ? "Generando..." : "Exportar"}
             </Button>
+
           </Group>
         </Stack>
       </Modal>
+
+      {/* ======================
+    ✅ NOTIFICACIÓN FLOTANTE EXPORT
+====================== */}
+      <Affix position={{ bottom: 20, right: 20 }}>
+        <Transition transition="slide-up" mounted={exporting || exportDone || exportProgress > 0}>
+          {(styles) => (
+            <div style={styles}>
+              {exportToastMinimized ? (
+                <Paper
+                  withBorder
+                  shadow="md"
+                  radius="md"
+                  p="sm"
+                  style={{ cursor: "pointer", maxWidth: 260 }}
+                  onClick={() => setExportToastMinimized(false)}
+                >
+                  <Group justify="space-between" gap="sm" wrap="nowrap">
+                    <Text size="sm" fw={600}>
+                      {exportDone ? "✅ Archivo listo" : `Exportando... ${exportProgress}%`}
+                    </Text>
+                    <ActionIcon variant="subtle" onClick={() => setExportToastMinimized(false)}>
+                      <IconChevronUp size={18} />
+                    </ActionIcon>
+                  </Group>
+                  <Progress value={exportProgress} size="sm" mt={8} />
+                </Paper>
+              ) : (
+                <Notification
+                  withBorder
+                  radius="md"
+                  title="Exportación en progreso"
+                  onClose={() => setExportToastMinimized(true)} // ✅ “cerrar” = minimizar
+                  styles={{
+                    root: {
+                      width: 340,
+                      maxWidth: "90vw",
+                      boxShadow: "0 8px 20px rgba(0,0,0,0.12)", // ✅ sombra sin prop shadow
+                    },
+                  }}
+                >
+
+                  <Stack gap={8}>
+                    <Text size="sm" c="dimmed">
+                      {exportMsg || "Generando archivo Excel..."}
+                    </Text>
+
+                    <Progress value={exportProgress} size="md" />
+
+                    <Group justify="space-between">
+                      <Text size="xs" c="dimmed">
+                        {exportProgress}%
+                      </Text>
+
+                      <Group gap="xs">
+                        <Button
+                          size="xs"
+                          variant="light"
+                          onClick={() => setExportToastMinimized(true)}
+                        >
+                          Minimizar
+                        </Button>
+                      </Group>
+                    </Group>
+                  </Stack>
+                </Notification>
+              )}
+            </div>
+          )}
+        </Transition>
+      </Affix>
+
     </Box>
   );
 }

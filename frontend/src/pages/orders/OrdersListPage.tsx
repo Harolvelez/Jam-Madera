@@ -10,9 +10,13 @@ import {
   Group,
   Modal,
   Checkbox,
+  Pagination, // ✅ nuevo
+  Select,
+  TextInput,
 } from "@mantine/core";
 import { useNavigate, useLocation } from "react-router-dom";
 import { notifications } from "@mantine/notifications";
+import { IconSearch, IconX } from "@tabler/icons-react"; // ✅ NUEVO
 
 type Order = {
   id: number;
@@ -35,6 +39,15 @@ export default function OrdersListPage() {
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [opened, setOpened] = useState(false);
 
+  // ✅ PAGINACIÓN
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState<number>(20);
+  const [search, setSearch] = useState("");
+
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }, [page, pageSize]);
+
   /* ======================
      CARGAR ÓRDENES
   ====================== */
@@ -53,6 +66,7 @@ export default function OrdersListPage() {
       })
       .then((data) => {
         setOrders(data);
+        setPage(1);
         setLoading(false);
       })
       .catch(() => {
@@ -70,9 +84,7 @@ export default function OrdersListPage() {
   ====================== */
   const toggleSelect = (id: number) => {
     setSelectedIds((prev) =>
-      prev.includes(id)
-        ? prev.filter((i) => i !== id)
-        : [...prev, id]
+      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
     );
   };
 
@@ -92,11 +104,11 @@ export default function OrdersListPage() {
           });
 
           if (!res.ok) {
-            let errMsg = 'No se pudieron eliminar las órdenes';
+            let errMsg = "No se pudieron eliminar las órdenes";
             try {
               const json = await res.json();
               if (json && json.message) errMsg = json.message;
-            } catch (e) {}
+            } catch (e) { }
             throw new Error(errMsg);
           }
 
@@ -134,6 +146,59 @@ export default function OrdersListPage() {
     );
   }
 
+  // ✅ BUSCADOR: helper normalizador (ORD-0007, ord0007, etc.)
+  function normalizeText(v: any) {
+    return String(v ?? "")
+      .toLowerCase()
+      .replace(/\s+/g, "")
+      .replace(/[-_]/g, "");
+  }
+
+  // ✅ BUSCADOR: lista filtrada (antes de paginar)
+  const filteredOrders = search.trim()
+    ? orders.filter((o) => {
+      const q = search.trim().toLowerCase();
+      const qNorm = normalizeText(q);
+
+      const fieldsRaw = [
+        o.order_number,
+        o.nit,
+        o.client_name,
+        o.creation_date,
+        o.estimated_delivery_date,
+        (() => {
+          // ✅ agrega también creation_date en formato DD/MM/YYYY
+          if (!o.creation_date) return "";
+          const [y, m, d] = o.creation_date.split("-").map(Number);
+          return `${String(d).padStart(2, "0")}/${String(m).padStart(2, "0")}/${y}`;
+        })(),
+        (() => {
+          // ✅ agrega también estimated_delivery_date en formato DD/MM/YYYY
+          if (!o.estimated_delivery_date) return "";
+          const [y, m, d] = o.estimated_delivery_date.split("-").map(Number);
+          return `${String(d).padStart(2, "0")}/${String(m).padStart(2, "0")}/${y}`;
+        })(),
+
+        o.id,
+      ]
+        .filter(Boolean)
+        .map((v) => String(v).toLowerCase());
+
+      if (fieldsRaw.some((f) => f.includes(q))) return true;
+
+      const fieldsNorm = fieldsRaw.map((v) => normalizeText(v));
+      return fieldsNorm.some((f) => f.includes(qNorm));
+    })
+    : orders;
+
+
+  // ✅ PAGINACIÓN: cálculo de páginas y órdenes visibles
+  const totalPages = Math.max(1, Math.ceil(filteredOrders.length / pageSize));
+  const safePage = Math.min(page, totalPages);
+  const startIndex = (safePage - 1) * pageSize;
+  const pagedOrders = filteredOrders.slice(startIndex, startIndex + pageSize);
+
+
   /* ======================
      RENDER
   ====================== */
@@ -143,6 +208,25 @@ export default function OrdersListPage() {
         Todas las Órdenes
       </Title>
 
+      <TextInput
+        value={search}
+        onChange={(e) => setSearch(e.currentTarget.value)}
+        placeholder="Buscar: orden, NIT, cliente o fecha..."
+        leftSection={<IconSearch size={16} />}
+        rightSection={
+          search ? (
+            <IconX
+              size={16}
+              style={{ cursor: "pointer" }}
+              onClick={() => setSearch("")}
+            />
+          ) : null
+        }
+        mb="md"
+        w={380}
+      />
+
+
       {selectedIds.length > 0 && (
         <Group mb="md">
           <Button color="red" onClick={() => setOpened(true)}>
@@ -151,73 +235,124 @@ export default function OrdersListPage() {
         </Group>
       )}
 
-      {orders.length === 0 ? (
-        <Text>No hay órdenes registradas.</Text>
+      {filteredOrders.length === 0 ? (
+        <Text>
+          {orders.length === 0
+            ? "No hay órdenes registradas."
+            : "No hay resultados para esa búsqueda."}
+        </Text>
       ) : (
-        <SimpleGrid cols={{ base: 1, sm: 2, lg: 3 }} spacing="md">
-          {orders.map((order) => (
-            <Card
-              key={order.id}
-              withBorder
-              shadow="sm"
-              style={{
-                cursor: "pointer",
-                border: selectedIds.includes(order.id)
-                  ? "2px solid #4caf50"
-                  : undefined,
-              }}
-              onClick={() =>
-                navigate(`/dashboard/orders/Detail/${order.id}`)
-              }
-            >
-              <Group justify="space-between" mb="xs">
-                <div
-                  onClick={(e) => e.stopPropagation()}
-                  onMouseDown={(e) => e.stopPropagation()}
-                >
-                  <Checkbox
-                    checked={selectedIds.includes(order.id)}
-                    onChange={() => toggleSelect(order.id)}
-                  />
-                </div>
 
-                <Title order={5}>{order.order_number}</Title>
-              </Group>
+        <>
+          <SimpleGrid cols={{ base: 1, sm: 2, lg: 3 }} spacing="md">
+            {pagedOrders.map((order) => (
+              <Card
+                key={order.id}
+                withBorder
+                shadow="sm"
+                style={{
+                  cursor: "pointer",
+                  border: selectedIds.includes(order.id)
+                    ? "2px solid #4caf50"
+                    : undefined,
+                }}
+                onClick={() => navigate(`/dashboard/orders/Detail/${order.id}`)}
+              >
+                <Group justify="space-between" mb="xs">
+                  <div
+                    onClick={(e) => e.stopPropagation()}
+                    onMouseDown={(e) => e.stopPropagation()}
+                  >
+                    <Checkbox
+                      checked={selectedIds.includes(order.id)}
+                      onChange={() => toggleSelect(order.id)}
+                    />
+                  </div>
 
-              <Text size="sm">
-                <strong>Cliente:</strong> {order.client_name || "-"}
-              </Text>
+                  <Title order={5}>{order.order_number}</Title>
+                </Group>
 
-              <Text size="sm">
-                <strong>NIT:</strong> {order.nit || "-"}
-              </Text>
+                <Text size="sm">
+                  <strong>Cliente:</strong> {order.client_name || "-"}
+                </Text>
 
-              <Text size="sm">
-                <strong>Fecha de creación:</strong>{" "}
-                {order.creation_date
-                  ? new Date(order.creation_date).toLocaleDateString("es-CO")
-                  : "-"}
-              </Text>
+                <Text size="sm">
+                  <strong>NIT:</strong> {order.nit || "-"}
+                </Text>
 
-              <Text size="sm">
-                <strong>Entrega estimada:</strong>{" "}
-                {order.estimated_delivery_date || "-"}
-              </Text>
+                <Text size="sm">
+                  <strong>Fecha de creación:</strong>{" "}
+                  {order.creation_date
+                    ? (() => {
+                      const [y, m, d] = order.creation_date
+                        .split("-")
+                        .map(Number);
+                      return new Date(y, m - 1, d).toLocaleDateString("es-CO");
+                    })()
+                    : "-"}
+                </Text>
 
-              <Group mt="md" grow>
-                <Button
-                  variant="light"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    navigate(`/dashboard/orders/edit/${order.id}`);
-                  }}
-                >
-                  Editar
-                </Button>
-              </Group>
-            </Card>
-          ))}
-        </SimpleGrid>
+                <Text size="sm">
+                  <strong>Entrega estimada:</strong>{" "}
+                  {order.estimated_delivery_date
+                    ? (() => {
+                      const [y, m, d] = order.estimated_delivery_date
+                        .split("-")
+                        .map(Number);
+                      return new Date(y, m - 1, d).toLocaleDateString("es-CO");
+                    })()
+                    : "-"}
+                </Text>
+
+                <Group mt="md" grow>
+                  <Button
+                    variant="light"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      navigate(`/dashboard/orders/edit/${order.id}`);
+                    }}
+                  >
+                    Editar
+                  </Button>
+                </Group>
+              </Card>
+            ))}
+          </SimpleGrid>
+
+          {/* ✅ PAGINACIÓN BONITA */}
+          <Group justify="space-between" mt="lg" align="center" wrap="wrap">
+            <Text size="sm" c="dimmed">
+              Mostrando {filteredOrders.length === 0 ? 0 : startIndex + 1}–
+              {Math.min(startIndex + pageSize, filteredOrders.length)} de {filteredOrders.length}
+            </Text>
+
+            <Group gap="sm">
+              <Select
+                value={String(pageSize)}
+                onChange={(v) => {
+                  const newSize = Number(v || 12);
+                  setPageSize(newSize);
+                  setPage(1);
+                }}
+                data={["10", "20", "30", "40", "50"].map((v) => ({
+                  value: v,
+                  label: `${v} / página`,
+                }))}
+                w={140}
+                size="sm"
+              />
+
+              <Pagination
+                value={safePage}
+                onChange={setPage}
+                total={totalPages}
+                radius="xl"
+                size="sm"
+                withEdges
+              />
+            </Group>
+          </Group>
+        </>
       )}
 
       <Modal
@@ -227,8 +362,7 @@ export default function OrdersListPage() {
         centered
       >
         <Text mb="md">
-          ¿Estás seguro de eliminar{" "}
-          <strong>{selectedIds.length}</strong> órdenes?
+          ¿Estás seguro de eliminar <strong>{selectedIds.length}</strong> órdenes?
         </Text>
 
         <Group justify="flex-end">

@@ -27,7 +27,9 @@ export default function OrderCard({
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    const deliveryDate = new Date(order.estimated_delivery_date + "T00:00:00");
+    // Parsear fecha sin conversión de timezone
+    const [year, month, day] = order.estimated_delivery_date.split("-").map(Number);
+    const deliveryDate = new Date(year, month - 1, day);
     isOverdue = deliveryDate < today;
   }
 
@@ -48,7 +50,7 @@ export default function OrderCard({
         cursor: "grab",
         opacity: isDragging ? 0 : 1,
         borderLeft: leftBorder,
-        touchAction: "none",
+        touchAction: "manipulation", // permite scroll, el delay del sensor controla el drag
         background: isDelivered ? "#ebfbee" : undefined, // suave verde solo en entregado
       }}
       {...(!isOverlay ? { ...listeners, ...attributes } : {})}
@@ -96,7 +98,10 @@ export default function OrderCard({
         {order.estimated_delivery_date && (
           <Text size="xs" c={isDelivered ? "green" : showOverdue ? "red" : "gray.6"}>
             📦 Entrega:{" "}
-            {new Date(order.estimated_delivery_date).toLocaleDateString("es-CO")}
+            {(() => {
+              const [y, m, d] = order.estimated_delivery_date.split("-").map(Number);
+              return new Date(y, m - 1, d).toLocaleDateString("es-CO");
+            })()}
           </Text>
         )}
       </Stack>

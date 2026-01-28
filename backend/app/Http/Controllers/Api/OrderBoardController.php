@@ -18,7 +18,7 @@ class OrderBoardController extends Controller
     {
         $statuses = OrderStatus::with([
             'orders' => function ($q) {
-                $q->with(['client'])
+                $q->with(['client', 'lastStatusHistory'])
                   ->orderBy('created_at', 'asc');
             }
         ])->orderBy('id')->get();

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   TextInput,
   Button,
@@ -16,8 +16,6 @@ import {
 } from "@mantine/core";
 import { useNavigate, useParams } from "react-router-dom";
 import { notifications } from "@mantine/notifications";
-
-
 
 export default function OrderEditPage() {
   const { id } = useParams();
@@ -40,8 +38,51 @@ export default function OrderEditPage() {
   const [numeroFactura, setNumeroFactura] = useState("");
   const [metodoPago, setMetodoPago] = useState<"Banco" | "Efectivo" | "">("");
 
-  // 👉 ahora SOLO un texto
+  // ✅ textarea con todos los items
   const [itemsText, setItemsText] = useState("");
+
+  // ✅ items originales (para bloquear cambios si no tiene permiso)
+  const [originalItems, setOriginalItems] = useState<any[]>([]);
+
+  // ✅ rol numérico (admin=1, gerente=2)
+  const roleId = useMemo(() => {
+    const safeParseIntStrict = (v: any) => {
+      const s = String(v ?? "").trim();
+      if (!/^\d+$/.test(s)) return 0;
+      const n = Number(s);
+      return Number.isFinite(n) ? n : 0;
+    };
+
+    // 1) desde user en localStorage
+    const userRaw = localStorage.getItem("user");
+    if (userRaw) {
+      try {
+        const u = JSON.parse(userRaw);
+        const possible =
+          u?.role_id ??
+          u?.roleId ??
+          u?.rol_id ??
+          u?.id_rol ??
+          u?.role ??
+          u?.rol;
+        const n = safeParseIntStrict(possible);
+        if (n) return n;
+      } catch {
+        // ignore
+      }
+    }
+
+    // 2) desde llaves sueltas
+    const possibleKeys = ["role_id", "roleId", "rol_id", "id_rol", "role", "rol"];
+    for (const k of possibleKeys) {
+      const n = safeParseIntStrict(localStorage.getItem(k));
+      if (n) return n;
+    }
+
+    return 0;
+  }, []);
+
+  const canEditItems = roleId === 1 || roleId === 2;
 
   /* ======================
      CARGAR ORDEN
@@ -71,11 +112,17 @@ export default function OrderEditPage() {
         setNumeroFactura(data.numero_factura ?? "");
         setMetodoPago(data.metodo_pago ?? "");
 
-        // ✅ Unimos todos los items con salto de línea
-        setItemsText(
-          (data.items ?? []).map((it: any) => it.description).join("\n")
-        );
+        // ✅ guardar items originales
+        const items = data.items ?? [];
+        setOriginalItems(items);
 
+        // ✅ llenar textarea (si algún description trae saltos, también los separa)
+        setItemsText(
+          items
+            .flatMap((it: any) => String(it.description ?? "").split(/\r?\n/))
+            .map((l: string) => l.trimEnd())
+            .join("\n")
+        );
 
         setLoading(false);
       })
@@ -96,6 +143,44 @@ export default function OrderEditPage() {
     e.preventDefault();
     setSaving(true);
 
+    // 1) descriptions limpias desde textarea (1 línea = 1 item)
+    const descriptions = itemsText
+      .split(/\r?\n/)
+      .map((line) =>
+        line
+          .trim()
+          .replace(/^\s*[•\-\*\u2022]\s*/g, "") // quita • - * al inicio
+      )
+      .filter(Boolean)
+      .map((d) => d.slice(0, 255)); // por si tu backend limita
+
+    // 2) construir items alineados con originales (incluye id si existía)
+    const itemsFromText = descriptions.map((description, idx) => {
+      const prev = originalItems[idx]; // puede no existir si se agregan más líneas
+      return {
+        ...(prev?.id ? { id: prev.id } : {}), // ✅ clave: mandar id si existe
+        description,
+        quantity: prev?.quantity ?? 1,
+        width: prev?.width ?? 0,
+        height: prev?.height ?? 0,
+        length: prev?.length ?? 0,
+        calibre: prev?.calibre ?? 0,
+      };
+    });
+
+    // ✅ si no tiene permiso, enviamos items originales
+    const itemsToSend = canEditItems ? itemsFromText : originalItems;
+
+    if (canEditItems && itemsToSend.length === 0) {
+      notifications.show({
+        title: "Atención",
+        message: "Debes ingresar al menos un ítem",
+        color: "yellow",
+      });
+      setSaving(false);
+      return;
+    }
+
     const body = {
       order_number: orderNumber,
       nit,
@@ -107,13 +192,7 @@ export default function OrderEditPage() {
       estimated_delivery_date: estimatedDeliveryDate || null,
       numero_factura: numeroFactura || null,
       metodo_pago: metodoPago || null,
-
-      // 👇 enviamos UN SOLO item
-      items: [
-        {
-          description: itemsText,
-        },
-      ],
+      items: itemsToSend,
     };
 
     try {
@@ -155,9 +234,6 @@ export default function OrderEditPage() {
     );
   }
 
-  /* ======================
-     RENDER
-  ====================== */
   return (
     <Paper p="lg" radius="md">
       <Title order={3} mb="md">
@@ -180,23 +256,18 @@ export default function OrderEditPage() {
               onChange={(e) => setClientName(e.target.value)}
               required
             />
-
             <TextInput
               label="NIT"
               value={nit}
               onChange={(e) => setNit(e.target.value)}
               required
             />
-
             <TextInput
               label="Teléfono"
               value={phone}
-              onChange={(e) =>
-                setPhone(e.target.value.replace(/\D/g, ""))
-              }
+              onChange={(e) => setPhone(e.target.value.replace(/\D/g, ""))}
               required
             />
-
             <TextInput
               label="Correo"
               value={email}
@@ -222,14 +293,11 @@ export default function OrderEditPage() {
               value={creationDate}
               onChange={(e) => setCreationDate(e.target.value)}
             />
-
             <TextInput
               type="date"
               label="Fecha estimada de entrega"
               value={estimatedDeliveryDate}
-              onChange={(e) =>
-                setEstimatedDeliveryDate(e.target.value)
-              }
+              onChange={(e) => setEstimatedDeliveryDate(e.target.value)}
             />
           </SimpleGrid>
 
@@ -240,7 +308,6 @@ export default function OrderEditPage() {
               onChange={(e) => setNumeroFactura(e.target.value)}
               placeholder="Ej: FAC-001"
             />
-
             <Select
               label="Método de pago"
               placeholder="Seleccione método de pago"
@@ -267,6 +334,17 @@ export default function OrderEditPage() {
 - Puerta en madera cedro
 - Marco reforzado
 - Acabado natural`}
+              readOnly={!canEditItems}
+              styles={{
+                input: !canEditItems
+                  ? { backgroundColor: "#f8f9fa", cursor: "not-allowed" }
+                  : undefined,
+              }}
+              description={
+                !canEditItems
+                  ? "Solo Gerente puede editar esta descripción."
+                  : undefined
+              }
             />
           </Card>
 

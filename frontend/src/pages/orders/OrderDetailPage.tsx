@@ -176,13 +176,19 @@ export default function OrderDetailPage() {
           <Text>
             <strong>Fecha de creación:</strong>{" "}
             {order.creation_date
-              ? new Date(order.creation_date).toLocaleDateString("es-CO")
+              ? (() => {
+                  const [y, m, d] = order.creation_date.split("-").map(Number);
+                  return new Date(y, m - 1, d).toLocaleDateString("es-CO");
+                })()
               : "-"}
           </Text>
           <Text>
             <strong>Entrega estimada:</strong>{" "}
             {order.estimated_delivery_date
-              ? new Date(order.estimated_delivery_date).toLocaleDateString("es-CO")
+              ? (() => {
+                  const [y, m, d] = order.estimated_delivery_date.split("-").map(Number);
+                  return new Date(y, m - 1, d).toLocaleDateString("es-CO");
+                })()
               : "-"}
           </Text>
           <Text><strong>Número de factura:</strong> {order.numero_factura || "-"}</Text>

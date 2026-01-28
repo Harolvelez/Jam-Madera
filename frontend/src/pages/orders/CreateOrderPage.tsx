@@ -15,7 +15,9 @@ import { notifications } from "@mantine/notifications";
 
 export default function CreateOrderPage() {
   const navigate = useNavigate();
-  const today = new Date().toISOString().split("T")[0];
+  // Usar fecha local (Colombia) sin conversión UTC
+  const now = new Date();
+  const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
   const token = localStorage.getItem("token");
 
   /* ======================

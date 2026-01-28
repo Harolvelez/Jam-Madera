@@ -50,6 +50,40 @@ export default function DashboardHome() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [statuses, setStatuses] = useState<OrderStatus[]>([]);
 
+  // ✅ NUEVO: redirección por rol al entrar al dashboard
+  useEffect(() => {
+    if (!token) return;
+
+    let roleId = 0;
+    try {
+      const u = JSON.parse(localStorage.getItem("user") || "{}");
+      roleId = Number(
+        u?.role_id ||
+        u?.roleId ||
+        u?.rol_id ||
+        u?.id_rol ||
+        u?.rol ||
+        u?.role ||
+        0
+      );
+    } catch {
+      roleId = 0;
+    }
+
+    // Ventas = 3 -> crear orden
+    if (roleId === 3) {
+      navigate("/dashboard/orders/CreateOrder", { replace: true });
+      return;
+    }
+
+    // Producción = 4 -> estados
+    if (roleId === 4) {
+      navigate("/dashboard/ordenes/estados", { replace: true });
+      return;
+    }
+  }, [token, navigate]);
+
+
   useEffect(() => {
     const load = async () => {
       const [u, board] = await Promise.all([
@@ -92,38 +126,55 @@ export default function DashboardHome() {
   // Estados
   const creadas = statuses.find(s => s.name === "creado")?.orders.length || 0;
   const enProduccion = statuses.find(s => s.name === "producción")?.orders.length || 0;
+  const enPintura = statuses.find(s => s.name === "pintura")?.orders.length || 0; // ✅ NUEVO
   const terminadas = statuses.find(s => s.name === "terminado")?.orders.length || 0;
+  const enInstalacion = statuses.find(s => s.name === "instalacion")?.orders.length || 0; // ✅ NUEVO
   const finalizadas = statuses.find(s => s.name === "finalizado")?.orders.length || 0;
 
+
+  const entregadoIds = new Set<number>(
+    statuses
+      .filter((s) => ["finalizado", "entregado"].includes((s.name ?? "").toLowerCase()))
+      .map((s) => s.id)
+  );
+
   const totalOrdenes = orders.length;
-  const ordenesPendientes = creadas + enProduccion + terminadas; // Todo lo que no esté finalizado
+  const ordenesPendientes = statuses
+    .filter((s) => !entregadoIds.has(s.id))
+    .reduce((acc, s) => acc + (s.orders?.length ?? 0), 0);
+  // Todo lo que no esté finalizado
 
   // Órdenes atrasadas (fecha estimada < hoy y no finalizadas)
   const hoy = new Date();
   hoy.setHours(0, 0, 0, 0);
-  const atrasadas = orders.filter(o => {
-    if (!o.estimated_delivery_date || o.status_id === 4) return false;
-    const fechaEntrega = new Date(o.estimated_delivery_date + "T00:00:00");
-    return fechaEntrega < hoy;
+  // Fecha de hoy en formato YYYY-MM-DD (local, sin UTC)
+  const hoyStr = `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, "0")}-${String(hoy.getDate()).padStart(2, "0")}`;
+
+  const atrasadas = orders.filter((o) => {
+    if (!o.estimated_delivery_date) return false;
+    if (entregadoIds.has(o.status_id)) return false; // ✅ si está finalizado/entregado no cuenta
+    return o.estimated_delivery_date < hoyStr;
   }).length;
 
   // Órdenes por entregar hoy
-  const hoyStr = hoy.toISOString().slice(0, 10);
-  const paraHoy = orders.filter(o => {
-    return o.estimated_delivery_date === hoyStr && o.status_id !== 4;
+  const paraHoy = orders.filter((o) => {
+    if (!o.estimated_delivery_date) return false;
+    if (entregadoIds.has(o.status_id)) return false; // ✅ si está finalizado/entregado no cuenta
+    return o.estimated_delivery_date === hoyStr;
   }).length;
+
 
   // Órdenes de esta semana (creadas esta semana)
   const inicioSemana = new Date(hoy);
   const diaSemana = hoy.getDay();
   const diffToMonday = (diaSemana + 6) % 7;
   inicioSemana.setDate(hoy.getDate() - diffToMonday);
-  inicioSemana.setHours(0, 0, 0, 0);
+  const inicioSemanaStr = `${inicioSemana.getFullYear()}-${String(inicioSemana.getMonth() + 1).padStart(2, "0")}-${String(inicioSemana.getDate()).padStart(2, "0")}`;
 
   const estaSemana = orders.filter(o => {
     if (!o.creation_date) return false;
-    const fechaCreacion = new Date(o.creation_date + "T00:00:00");
-    return fechaCreacion >= inicioSemana;
+    // Comparar strings directamente
+    return o.creation_date >= inicioSemanaStr;
   }).length;
 
   // Tipos de ingreso
@@ -202,7 +253,16 @@ export default function DashboardHome() {
           </Group>
         </Card>
 
-        <Card withBorder padding="lg">
+        <Card
+          withBorder
+          padding="lg"
+          style={{ cursor: "pointer" }}
+          onClick={() =>
+            navigate("/dashboard/ordenes/estados", {
+              state: { preset: "today" },
+            })
+          }
+        >
           <Group justify="space-between">
             <div>
               <Text c="dimmed" size="sm" fw={500}>
@@ -218,7 +278,17 @@ export default function DashboardHome() {
           </Group>
         </Card>
 
-        <Card withBorder padding="lg">
+
+        <Card
+          withBorder
+          padding="lg"
+          style={{ cursor: "pointer" }}
+          onClick={() =>
+            navigate("/dashboard/ordenes/estados", {
+              state: { preset: "overdue" },
+            })
+          }
+        >
           <Group justify="space-between">
             <div>
               <Text c="dimmed" size="sm" fw={500}>
@@ -233,6 +303,7 @@ export default function DashboardHome() {
             </ThemeIcon>
           </Group>
         </Card>
+
       </SimpleGrid>
 
       {/* GRÁFICAS DE PROGRESO */}
@@ -301,10 +372,10 @@ export default function DashboardHome() {
         <Text fw={600} size="lg" mb="md">
           Órdenes por Estado
         </Text>
-        <SimpleGrid cols={{ base: 2, sm: 4 }} spacing="md">
+        <SimpleGrid cols={{ base: 2, sm: 3, md: 6 }} spacing="md">
           <Box
             style={{ cursor: "pointer" }}
-            onClick={() => navigate("/dashboard/estados-ordenes")}
+            onClick={() => navigate("/dashboard/ordenes/estados")}
           >
             <Group gap="xs">
               <ThemeIcon size={40} radius="md" variant="light" color="purple">
@@ -321,7 +392,7 @@ export default function DashboardHome() {
 
           <Box
             style={{ cursor: "pointer" }}
-            onClick={() => navigate("/dashboard/estados-ordenes")}
+            onClick={() => navigate("/dashboard/ordenes/estados")}
           >
             <Group gap="xs">
               <ThemeIcon size={40} radius="md" variant="light" color="yellow">
@@ -338,7 +409,25 @@ export default function DashboardHome() {
 
           <Box
             style={{ cursor: "pointer" }}
-            onClick={() => navigate("/dashboard/estados-ordenes")}
+            onClick={() => navigate("/dashboard/ordenes/estados")}
+          >
+            <Group gap="xs">
+              <ThemeIcon size={40} radius="md" variant="light" color="orange">
+                <IconAlertTriangle size={20} />
+              </ThemeIcon>
+              <div>
+                <Text size="xs" c="dimmed">
+                  Pintura
+                </Text>
+                <Title order={3}>{enPintura}</Title>
+              </div>
+            </Group>
+          </Box>
+
+
+          <Box
+            style={{ cursor: "pointer" }}
+            onClick={() => navigate("/dashboard/ordenes/estados")}
           >
             <Group gap="xs">
               <ThemeIcon size={40} radius="md" variant="light" color="blue">
@@ -355,7 +444,25 @@ export default function DashboardHome() {
 
           <Box
             style={{ cursor: "pointer" }}
-            onClick={() => navigate("/dashboard/estados-ordenes")}
+            onClick={() => navigate("/dashboard/ordenes/estados")}
+          >
+            <Group gap="xs">
+              <ThemeIcon size={40} radius="md" variant="light" color="indigo">
+                <IconClock size={20} />
+              </ThemeIcon>
+              <div>
+                <Text size="xs" c="dimmed">
+                  Instalación
+                </Text>
+                <Title order={3}>{enInstalacion}</Title>
+              </div>
+            </Group>
+          </Box>
+
+
+          <Box
+            style={{ cursor: "pointer" }}
+            onClick={() => navigate("/dashboard/ordenes/estados")}
           >
             <Group gap="xs">
               <ThemeIcon size={40} radius="md" variant="light" color="green">

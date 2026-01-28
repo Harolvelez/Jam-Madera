@@ -1,13 +1,21 @@
 .navbar {
-  height: 100%;
+  height: 100vh;
   padding: 10px;
   background-color: #f8f9fa;
   border-right: 1px solid #ddd;
+  display: flex;
+  flex-direction: column;
 }
 
 .title {
   margin-bottom: 15px;
   padding-left: 10px;
+  flex-shrink: 0;
+}
+
+.links {
+  flex: 1;
+  overflow-y: auto;
 }
 
 .control {

@@ -33,8 +33,22 @@ class Order extends Model
         'description',
     ];
 
+    protected $casts = [
+        'creation_date' => 'date:Y-m-d',
+        'estimated_delivery_date' => 'date:Y-m-d',
+        'delivery_date' => 'date:Y-m-d',
+    ];
+
     public function items()
     {
         return $this->hasMany(OrderItem::class, 'order_id');
+    }
+
+    /**
+     * Último cambio de estado (para saber cuándo se movió a la columna actual)
+     */
+    public function lastStatusHistory()
+    {
+        return $this->hasOne(OrderStatusHistory::class, 'order_id')->latestOfMany('changed_at');
     }
 }

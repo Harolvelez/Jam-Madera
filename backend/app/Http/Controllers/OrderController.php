@@ -39,18 +39,60 @@ class OrderController extends Controller
     /* =========================
        NEXT NUMBER
     ========================= */
-    public function nextNumber()
-    {
-        $last = Order::orderBy('id', 'desc')->first();
+    // NEXT NUMBER (ORD-0001 .. ORD-9999, ORD-A0001 .. ORD-Z9999, luego vuelve a ORD-0001)
+public function nextNumber()
+{
+    $last = Order::orderBy('id', 'desc')->first();
 
-        $nextNumber = $last
-            ? intval(preg_replace('/\D/', '', (string) $last->order_number)) + 1
-            : 1;
-
-        return response()->json([
-            'next' => 'ORD-' . str_pad((string) $nextNumber, 4, '0', STR_PAD_LEFT),
-        ]);
+    // si no hay nada, empieza normal
+    if (!$last || !$last->order_number) {
+        return response()->json(['next' => 'ORD-0001']);
     }
+
+    $lastStr = strtoupper(trim((string) $last->order_number));
+
+    // Formatos válidos:
+    // ORD-0001
+    // ORD-A0001
+    // (letra opcional + 4 dígitos)
+    if (preg_match('/^ORD\-([A-Z])?(\d{4})$/', $lastStr, $m)) {
+        $letter = $m[1] ?? null;      // null = sin letra
+        $num    = intval($m[2]);      // 0001..9999
+
+        if ($num < 9999) {
+            $num++;
+        } else {
+            // num == 9999 -> avanzar "serie"
+            if ($letter === null) {
+                $letter = 'A';
+            } elseif ($letter !== 'Z') {
+                $letter = chr(ord($letter) + 1);
+            } else {
+                // Z9999 -> vuelve a sin letra
+                $letter = null;
+            }
+            $num = 1;
+        }
+
+        $suffix = str_pad((string) $num, 4, '0', STR_PAD_LEFT);
+        $next = $letter ? "ORD-{$letter}{$suffix}" : "ORD-{$suffix}";
+
+        return response()->json(['next' => $next]);
+    }
+
+    // Fallback (por si tienes números viejos tipo ORD-10000):
+    // Si ya pasó de 9999 con el formato viejo, arrancamos la serie A0001
+    $digits = intval(preg_replace('/\D/', '', $lastStr));
+    if ($digits >= 9999) {
+        return response()->json(['next' => 'ORD-A0001']);
+    }
+
+    $nextNumber = $digits + 1;
+    return response()->json([
+        'next' => 'ORD-' . str_pad((string) $nextNumber, 4, '0', STR_PAD_LEFT),
+    ]);
+}
+
 
     /* =========================
        CREAR ORDEN
