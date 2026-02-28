@@ -156,48 +156,65 @@ export default function OrdersCalendar() {
 
           <Divider />
 
-          <Grid>
+          <Grid gutter="xl">
             {/* Calendario */}
-            <Grid.Col span={{ base: 12, md: 6 }}>
-              <Calendar
-                firstDayOfWeek={1}
-                getDayProps={(date) => {
-                  const key = dateToKey(date);
-                  const dateObj = keyToDate(key);
-                  return {
-                    selected: selectedDay === key,
-                    onClick: () => {
-                      console.debug("Calendar click", { date, dateObj: dateObj.toString(), key });
-                      setSelectedDay(key);
-                      setStatusFilter("all"); // reset filtro al cambiar día
-                    },
-                  };
-                }}
-                onNextMonth={handleMonthChange}
-                onPreviousMonth={handleMonthChange}
-                renderDay={(date) => {
-                  const key = dateToKey(date);
-                  const orders = getOrdersForDay(key);
-                  const day = keyToDate(key).getDate();
+            <Grid.Col span={{ base: 12, md: 4 }}>
+              <Paper withBorder p="xl" radius="md" style={{ display: "flex", justifyContent: "center" }}>
+                <Calendar
+                  style={{ width: "fit-content" }}
+                  firstDayOfWeek={1}
+                  styles={{
+                    day: { height: 60, fontSize: 18, paddingTop: 15 },
+                    weekday: { fontSize: 14, fontWeight: 700 },
+                    calendarHeaderLevel: { fontSize: 20, fontWeight: 800 },
+                  }}
 
-                  return (
-                    <Indicator
-                      disabled={orders.length === 0}
-                      label={orders.length}
-                      size={16}
-                      color="blue"
-                      offset={5}
-                      style={{ zIndex: 1 }}
-                    >
-                      <div>{day}</div>
-                    </Indicator>
-                  );
-                }}
-              />
+                  getDayProps={(date) => {
+                    const key = dateToKey(date);
+                    const dateObj = keyToDate(key);
+                    return {
+                      selected: selectedDay === key,
+                      onClick: () => {
+                        console.debug("Calendar click", { date, dateObj: dateObj.toString(), key });
+                        setSelectedDay(key);
+                        setStatusFilter("all");
+                      },
+                    };
+                  }}
+                  onNextMonth={handleMonthChange}
+                  onPreviousMonth={handleMonthChange}
+                  renderDay={(date) => {
+                    const key = dateToKey(date);
+                    const orders = getOrdersForDay(key);
+                    const day = keyToDate(key).getDate();
+
+                    return (
+                      <Indicator
+                        disabled={orders.length === 0}
+                        label={orders.length}
+                        size={16}
+                        color="blue"
+                        position="top-end"
+                        offset={12}
+                        styles={{
+                          indicator: {
+                            transform: "translate(6px, -16px)", // ✅ lo sube y lo saca del número
+                            fontWeight: 700,
+                          },
+                        }}
+                      >
+                        <div style={{ paddingTop: 6 }}>{day}</div>
+                      </Indicator>
+
+                    );
+                  }}
+                />
+              </Paper>
             </Grid.Col>
 
+
             {/* Detalle del día */}
-            <Grid.Col span={{ base: 12, md: 6 }}>
+            <Grid.Col span={{ base: 12, md: 8 }}>
               <Paper withBorder p="md" radius="md" mih={350}>
                 {!selectedDay ? (
                   <Stack align="center" justify="center" h="100%">

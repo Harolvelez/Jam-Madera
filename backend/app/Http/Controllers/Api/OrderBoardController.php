@@ -18,10 +18,25 @@ class OrderBoardController extends Controller
     {
         $statuses = OrderStatus::with([
             'orders' => function ($q) {
-                $q->with(['client', 'lastStatusHistory'])
+                $q->with(['lastStatusHistory'])
                   ->orderBy('created_at', 'asc');
             }
         ])->orderBy('id')->get();
+
+        // Ocultar órdenes entregadas con más de 30 días desde el cambio de estado
+        $cutoffDate = now()->subDays(30);
+
+        $statuses->each(function ($status) use ($cutoffDate) {
+            if (strtolower($status->name) === 'finalizado') {
+                $status->setRelation('orders',
+                    $status->orders->filter(function ($order) use ($cutoffDate) {
+                        $changedAt = $order->lastStatusHistory?->changed_at;
+                        if (!$changedAt) return true;
+                        return \Carbon\Carbon::parse($changedAt)->gte($cutoffDate);
+                    })->values()
+                );
+            }
+        });
 
         return response()->json($statuses);
     }

@@ -269,8 +269,8 @@ export default function EstadosOrdenes() {
   }
 
   /**
-   * ✅ Verifica si una orden entregada tiene más de 10 días en esa columna
-   * Si tiene más de 10 días, se oculta del tablero
+   * ✅ Verifica si una orden entregada tiene más de 30 días en esa columna
+   * Si tiene más de 30 días, se oculta del tablero
    */
   function isDeliveredOrderTooOld(order: any, statusName: string) {
     // Solo aplica para la columna "finalizado" (que se muestra como "Entregado")
@@ -286,7 +286,7 @@ export default function EstadosOrdenes() {
     const diffTime = today.getTime() - changedDate.getTime();
     const diffDays = diffTime / (1000 * 60 * 60 * 24);
 
-    return diffDays > 10; // Si tiene más de 10 días, es "muy vieja"
+    return diffDays > 30; // Si tiene más de 30 días, es "muy vieja"
   }
 
   function isOrderInRange(order: any) {
@@ -371,7 +371,7 @@ export default function EstadosOrdenes() {
           if (!matchesSearch(order)) return false;
           if (!isOrderInRange(order)) return false;
           if (onlyOverdue && !isOrderOverdue(order, status.name)) return false;
-          // ✅ Ocultar órdenes entregadas con más de 10 días
+          // ✅ Ocultar órdenes entregadas con más de 30 días
           if (isDeliveredOrderTooOld(order, status.name)) return false;
           return true;
         });

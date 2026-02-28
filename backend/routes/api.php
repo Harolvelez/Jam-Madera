@@ -69,7 +69,7 @@ Route::middleware('auth:sanctum')->group(function () {
     ========================================================= */
 
     // 📊 Tablero tipo Trello
-    Route::get('/orders/board', [OrderController::class, 'board']);
+    Route::get('/orders/board', [OrderBoardController::class, 'board']);
 
     // 📅 Calendario de órdenes
     Route::get('/orders/calendar', [OrderCalendarController::class, 'index']);
